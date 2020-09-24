@@ -12,8 +12,9 @@ from .utils import *
 
 
 
-def peptide_backbone_alignment(itpfile, topfile, grofile, trrfile):
+def peptide_backbone_alignment(itpfile, topfile, grofile, trrfile, box):
     """Alignment fluctuation of peptide backbone of the MARTINI molecule
+    box is a di
     """
 
     itpname = os.path.basename(itpfile).strip('.itp')
@@ -24,6 +25,9 @@ def peptide_backbone_alignment(itpfile, topfile, grofile, trrfile):
     positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
     num_frames = positions.shape[0]
 
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
     
     positions = positions.reshape(-1,nmol,num_atoms,3)
     points = positions[:,:,bb_bonds_permol[:,0]]
@@ -48,7 +52,7 @@ def peptide_backbone_alignment(itpfile, topfile, grofile, trrfile):
 
 
 
-def betasheet_sc_alignment(itpfile, topfile, grofile, trrfile, residue_indices):
+def betasheet_sc_alignment(itpfile, topfile, grofile, trrfile, residue_indices, box):
     """Alignment deviation of sidechain that forms beta sheet
     """
 
@@ -60,6 +64,10 @@ def betasheet_sc_alignment(itpfile, topfile, grofile, trrfile, residue_indices):
     start_index  = 0
     positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
     num_frames = positions.shape[0]
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
 
     positions = positions.reshape(-1,nmol,num_atoms,3)
     points     = positions[:,:,sc_bonds_permol[:,0]]
@@ -269,7 +277,7 @@ def molecule_rmsd(itpfile, topfile, grofile, trrfile):
 
 
 
-def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range):
+def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, box):
     """Water density profile as you go from hydrophobic end to hydrophilic end
     """
     
@@ -287,6 +295,9 @@ def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range):
     nmol_W         = get_num_molecules(topfile, 'W')
     positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
 
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
 
     # atom indices from itpfile
     pep_indices = []
@@ -347,7 +358,7 @@ def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range):
 
 
 
-def binding(itpfile_PA, itpfile_pep, topfile, grofile, trrfile, radius, frame_range):
+def binding(itpfile_PA, itpfile_pep, topfile, grofile, trrfile, radius, frame_range, box):
     """Measures the probability of the two molecules - PA and pep - being near to each other
     All neighboring pairs of particles in PA and pep are frame-wise checked 
     to count how many frames their contact last. 
@@ -374,7 +385,9 @@ def binding(itpfile_PA, itpfile_pep, topfile, grofile, trrfile, radius, frame_ra
     positions_pep    = positions_pep.reshape(-1,nmol_pep,num_atoms_pep,3)
     shape_pep        = positions_pep.shape
     
-
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
 
     # Calculate neighboring particle pairs (of PA and pep) for all frames
     neighbor_pairs = []
