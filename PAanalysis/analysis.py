@@ -4,9 +4,8 @@
 
 import numpy as np
 import os
-import matplotlib.pyplot as plt
 import itertools
-from utils import *
+from .utils import *
 
 
 
@@ -270,7 +269,7 @@ def molecule_rmsd(itpfile, topfile, grofile, trrfile):
 
 
 
-def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, filename):
+def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range):
     """Water density profile as you go from hydrophobic end to hydrophilic end
     """
     
