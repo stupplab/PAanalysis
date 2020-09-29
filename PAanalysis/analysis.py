@@ -437,3 +437,67 @@ def binding(itpfile_PA, itpfile_pep, topfile, grofile, trrfile, radius, frame_ra
     return neighbor_pairs_duration
         
    
+
+
+
+
+def average_molecule_structure(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    ''' Calculates the descriptor that characterizes the structure and dynamics
+    of the PA assembly.
+    Average PA molecule (mean and std of positions) is calculated 
+    wrt to its center-of-mass and average orientation
+
+    frame_iterator: frames to calculate the value for
+
+
+    WHAT AM I DOING SERIOUSLY - AVERAGING POSITIONS MAKES SO SENSE
+    Molecule also needs to be oriented in the right direction
+    '''
+    
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    num_atoms       = get_num_atoms(itpfile)
+    nmol            = get_num_molecules(topfile, itpname)
+    start_index     = 0
+    positions       = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames      = positions.shape[0]
+    positions       = positions.reshape(-1,nmol,num_atoms,3)
+    shape           = positions.shape
+
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+
+    res_position_mean = []
+    res_position_std  = []
+
+    positions = positions[list(frame_iterator)]
+    mol_com = np.mean(positions, axis=2, keepdims=True)
+    positions -= mol_com
+    
+    res_position_mean = np.mean(positions, axis=1)
+    res_position_std  = np.std(positions, axis=1)
+
+
+    return res_position_mean, res_position_std
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
