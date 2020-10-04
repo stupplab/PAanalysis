@@ -6,7 +6,7 @@ import numpy as np
 import os
 import itertools
 from .utils import *
-
+from . import quaternion
 
 
 
@@ -277,6 +277,64 @@ def molecule_rmsd(itpfile, topfile, grofile, trrfile):
 
 
 
+def res_rmsd_AUC(itpfile, topfile, grofile, trrfile, frame_iterator, box, delta_frames):
+    ''' Area under the curve of rmsd divided by number of frames is calculated for each residue
+    delta_frames: number of frames over which res_displacement is returned
+    '''
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+
+    # calculate mean square displacement profile wrt time for each residue
+    rmsd = []
+    t = []
+    for delta_t in range(1,num_frames):
+        sq_displacement = np.sum((positions[delta_t:] - positions[:-delta_t])**2, axis=-1)
+        rmsd += [np.sqrt(np.mean(sq_displacement, axis=(0,1)))]
+        t+=[delta_t]
+
+    
+    AUC = np.sum(rmsd[:num_frames], axis=0)[atom_indices]
+    
+
+    return res_names, AUC
+
+
+
+
+
+
 def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, box):
     """Water density profile as you go from hydrophobic end to hydrophilic end
     """
@@ -454,8 +512,11 @@ def average_molecule_structure(itpfile, topfile, grofile, trrfile, frame_iterato
     Molecule also needs to be oriented in the right direction
     '''
     
+    
+
     itpname = os.path.basename(itpfile).strip('.itp')
     bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
     num_atoms       = get_num_atoms(itpfile)
     nmol            = get_num_molecules(topfile, itpname)
     start_index     = 0
@@ -475,9 +536,62 @@ def average_molecule_structure(itpfile, topfile, grofile, trrfile, frame_iterato
     res_position_std  = []
 
     positions = positions[list(frame_iterator)]
-    mol_com = np.mean(positions, axis=2, keepdims=True)
-    positions -= mol_com
+
+    # shift molecules to origin
+    mol_centroids = np.mean(positions, axis=2, keepdims=True)
+    positions -= mol_centroids
     
+
+    # rotate molecules so that their average orientation points in z-axis
+    points = positions[:,:,bb_bonds_permol[:,0]]
+    ref_points = positions[:,:,bb_bonds_permol[:,1]]
+    points = unwrap_points(points, ref_points, Lx, Ly, Lz)
+    vectors = points - ref_points
+    mol_average_orientation = np.mean(vectors, axis=2)
+
+    positions_ = []
+    for i,frame_positions in enumerate(positions):
+        frame_positions_ = []
+        for j, mol_positions in enumerate(frame_positions):
+            v1 = mol_average_orientation[i,j]
+            v2 = [0,0,1]
+            q = quaternion.q_between_vectors(v1, v2)
+
+            mol_positions_ = []
+            for k, p in enumerate(mol_positions):
+                mol_positions_ += [ quaternion.qv_mult(q,p) ]
+
+            frame_positions_ += [ mol_positions_ ]
+
+    positions_ += [ frame_positions_ ]
+    positions = np.array(positions_)
+
+
+    points = positions[:,:,sc_bonds_permol[:,0]]
+    ref_points = positions[:,:,sc_bonds_permol[:,1]]
+    points = unwrap_points(points, ref_points, Lx, Ly, Lz)
+    vectors = points - ref_points
+    mol_average_orientation = np.mean(vectors, axis=2)
+
+    positions_ = []
+    for i,frame_positions in enumerate(positions):
+        frame_positions_ = []
+        for j, mol_positions in enumerate(frame_positions):
+            v1 = mol_average_orientation[i,j]
+            v2 = [1,0,0]
+            q = quaternion.q_between_vectors(v1, v2)
+
+            mol_positions_ = []
+            for k, p in enumerate(mol_positions):
+                mol_positions_ += [ quaternion.qv_mult(q,p) ]
+
+            frame_positions_ += [ mol_positions_ ]
+
+    positions_ += [ frame_positions_ ]
+    positions = np.array(positions_)
+
+    
+
     res_position_mean = np.mean(positions, axis=1)
     res_position_std  = np.std(positions, axis=1)
 
@@ -489,7 +603,99 @@ def average_molecule_structure(itpfile, topfile, grofile, trrfile, frame_iterato
 
 
 
+def res_res_separation(itpfile, topfile, grofile, trrfile, radius, frame_iterator, box):
+    '''
+    NOT COMPLETED
+    For each residue on a PA, calculate it's average separation from the closest residue
+    '''
 
+    import freud
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
+    num_atoms       = get_num_atoms(itpfile)
+    nmol            = get_num_molecules(topfile, itpname)
+    start_index     = 0
+    positions       = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames      = positions.shape[0]
+    positions       = positions.reshape(-1,nmol,num_atoms,3)
+    shape           = positions.shape
+
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+
+    # calculate separation
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+    sep = [[]]*len(atom_indices)
+    for frame in frame_iterator:
+            
+        for i,atom_index in enumerate(atom_indices):
+            points = positions[frame,:,atom_index]
+            neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
+            query_args = dict(mode='ball', r_max=radius, exclude_ii=True)
+            
+            neighbor_pairs = neighborhood.query(points, query_args).toNeighborList()[:]
+            
+
+            # unwrap bond lengths
+            points1 = points[neighbor_pairs[:,0]]
+            points2 = points[neighbor_pairs[:,1]]
+            
+            points1 = unwrap_points(
+                points1,
+                points2, 
+                Lx, Ly, Lz)
+
+            distances = np.linalg.norm(points1-points2, axis=1)
+            
+            sep[i] += list(distances)
+            
+            print(np.mean(sep[i]))
+
+    raise
+
+
+    res_res_sep_mean = []
+    res_res_sep_std = []
+    for i,atom_index in enumerate(atom_indices):
+        res_res_sep_mean += [ np.mean(sep[i]) ]
+        res_res_sep_std += [ np.std(sep[i]) ]
+
+
+
+    return res_names, res_res_sep_mean, res_res_sep_std
 
 
 
