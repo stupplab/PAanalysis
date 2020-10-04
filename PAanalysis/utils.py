@@ -68,12 +68,28 @@ def get_backbone_bonds_permol(itpfile):
 
 
 
-def get_sidechain_bonds_permol(itpfile, residue_indices):
+def get_sidechain_bonds_permol(itpfile, residue_indices=None):
     """Return array of bonded atom pairs of the sidechain of MARTINI molecule
     using the itpfile
     """
     
+    if residue_indices == None:
+        residue_indices = []
+        start = False
+        with open(itpfile, 'r') as f:
+            for line in f:
+                if '[ atoms ]' in line:
+                    start = True
+                    continue
+                if start:
+                    words = line.split()
+                    if words == []:
+                        break
+                    if ' SC' in line:
+                        if words[3] != 'PAM':
+                            residue_indices += [int(words[2])-1]
 
+    
     atom_indices = []
     start = False
     with open(itpfile, 'r') as f:
