@@ -212,6 +212,194 @@ def structure_factor(itpfile, topfile, grofile, trrfile, frame_range):
 
 
 
+def res_Sq(itpfile, topfile, grofile, trrfile, frame_iterator, q):
+    ''' Residue wise scattering function in z axis
+    q is N x 3 array
+    '''
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+    # q  = q.Treshape(3,-1)
+    Sq = []
+    for i,atom_index in enumerate(atom_indices):
+        tmp = []
+        for frame in frame_iterator:
+            R = positions[frame,:,atom_index]
+            ft = np.sum(np.exp(-1j*R.dot(q.T)), axis=0)
+            tmp += [(ft*ft.conjugate()).real/len(R)]
+
+        Sq += [ np.mean(tmp, axis=0) ]
+            
+    return res_names, Sq
+
+
+
+
+def res_Sq_z(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    ''' Residue wise scattering function in z axis
+    '''
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+
+
+    q  = np.linspace(1, 100, 200).reshape(1,-1)
+    Sq = []
+    for i,atom_index in enumerate(atom_indices):
+        tmp = []
+        for frame in frame_iterator:
+            z = positions[frame,:,atom_index,2].reshape(-1,1)
+            ft = np.sum(np.exp(-1j*z.dot(q)), axis=0)
+            tmp += [(ft*ft.conjugate()).real/len(z)]
+
+        Sq += [ np.mean(tmp, axis=0) ]
+            
+
+    return res_names, q.reshape(-1), Sq
+
+
+
+
+
+
+def res_Sq_azimuthal(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    ''' Residue wise scattering function in azimuthal angle
+    '''
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+    
+    
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+
+    
+    q  = np.linspace(1, 100, 100).reshape(1,-1)
+    Sq = []
+    for i,atom_index in enumerate(atom_indices):
+        tmp = []
+        for frame in frame_iterator:
+            X = positions[frame,:,atom_index].reshape(-1,3)
+            X[:,2]=0
+            X -= np.mean(X, axis=0)
+            theta = np.array([quaternion.angle_v1tov2([1,0,0], x) for x in X]).reshape(-1,1)
+            ft = np.sum(np.exp(-1j*theta.dot(q)), axis=0)
+            tmp += [(ft*ft.conjugate()).real/len(theta)]
+        Sq += [ np.mean(tmp, axis=0) ]
+        
+    return res_names, q.reshape(-1), Sq
+
+
+
+
 
 
 def radius_of_gyration(itpfile, topfile, grofile, trrfile):
@@ -248,8 +436,9 @@ def radius_of_gyration(itpfile, topfile, grofile, trrfile):
 
 
 
-def molecule_rmsd(itpfile, topfile, grofile, trrfile):
-    """Root Mean square displacement
+def molecule_rmsd(itpfile, topfile, grofile, trrfile, box):
+    """Root Mean square displacement with respect to assembly centre
+    of the molecule's center of mass
     """
 
     itpname = os.path.basename(itpfile).strip('.itp')
@@ -261,15 +450,27 @@ def molecule_rmsd(itpfile, topfile, grofile, trrfile):
     num_frames = positions.shape[0]
     positions = positions.reshape(-1,nmol,num_atoms,3)
 
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
 
-    mol_com = np.mean(positions, axis=2)
+
 
     rmsd = []
     t = []
+    positions = positions.reshape(num_frames,-1,3)
+    frame_com = np.mean(positions, axis=1, keepdims=True)
     for delta_t in range(1,num_frames):
-        rmsd += [np.sqrt(np.mean((mol_com[delta_t:] - mol_com[:-delta_t])**2))]
-        t+=[delta_t]
+        r = (positions[delta_t:]-frame_com[delta_t:]) - (positions[:-delta_t]-frame_com[:-delta_t])
 
+        r = r.reshape(-1,3)
+        r = np.compress(np.abs(r[:,0])<Lx/2, r, axis=0)
+        r = np.compress(np.abs(r[:,1])<Ly/2, r, axis=0)
+        r = np.compress(np.abs(r[:,2])<Lz/2, r, axis=0)
+
+
+        rmsd += [np.sqrt(np.mean(( r )**2))]
+        t+=[delta_t]
     
     return t, rmsd
 
@@ -277,7 +478,7 @@ def molecule_rmsd(itpfile, topfile, grofile, trrfile):
 
 
 
-def res_rmsd_AUC(itpfile, topfile, grofile, trrfile, frame_iterator, box, delta_frames):
+def res_rmsd_AUC(itpfile, topfile, grofile, trrfile, stride, box, delta_frames):
     ''' Area under the curve of rmsd divided by number of frames is calculated for each residue
     delta_frames: number of frames over which res_displacement is returned
     '''
@@ -289,6 +490,79 @@ def res_rmsd_AUC(itpfile, topfile, grofile, trrfile, frame_iterator, box, delta_
     positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
     num_frames = positions.shape[0]
     positions = positions.reshape(-1,nmol,num_atoms,3)
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+    
+
+
+
+    AUC = []
+    frame_com = np.mean(positions, axis=(1,2)).reshape(num_frames,1,3)
+    for atom_index in atom_indices:
+        tmp = []        
+        for delta_t in range(1,num_frames):
+            r = (positions[delta_t:,:,atom_index]-frame_com[delta_t:]) - (positions[:-delta_t,:,atom_index]-frame_com[:-delta_t])
+            r = r[::stride]
+            r = r.reshape(-1,3)
+            r = np.compress(np.abs(r[:,0])<Lx/2, r, axis=0)
+            r = np.compress(np.abs(r[:,1])<Ly/2, r, axis=0)
+            r = np.compress(np.abs(r[:,2])<Lz/2, r, axis=0)
+
+            tmp += [np.sqrt(np.mean(( r )**2))]
+        AUC += [ np.sum(tmp[:delta_frames]) ]
+
+
+    return res_names, np.array(AUC)
+
+
+
+
+
+def res_rmsd_AUC_freud(itpfile, topfile, grofile, trrfile, box, delta_frames):
+    ''' Area under the curve of rmsd divided by number of frames is calculated for each residue
+    delta_frames: number of frames over which res_displacement is returned
+    '''
+
+    import freud
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
 
     # atom indices from itpfile
     pep_indices = []
@@ -317,20 +591,27 @@ def res_rmsd_AUC(itpfile, topfile, grofile, trrfile, frame_iterator, box, delta_
 
 
     # calculate mean square displacement profile wrt time for each residue
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+    msd = freud.msd.MSD(box=box)
+
     rmsd = []
     t = []
-    for delta_t in range(1,num_frames):
-        sq_displacement = np.sum((positions[delta_t:] - positions[:-delta_t])**2, axis=-1)
+    for delta_t in range(1,delta_frames):
+        r1 = positions[delta_t:]
+        r2 = positions[:-delta_t]
+
+        r = (r1-r2)[::stride]
+        sq_displacement = np.sum(r**2, axis=-1)
         rmsd += [np.sqrt(np.mean(sq_displacement, axis=(0,1)))]
         t+=[delta_t]
 
-    
-    AUC = np.sum(rmsd[:num_frames], axis=0)[atom_indices]
+
+    AUC = np.sum(rmsd[:delta_frames], axis=0)[atom_indices]
     
 
     return res_names, AUC
-
-
 
 
 
@@ -500,7 +781,8 @@ def binding(itpfile_PA, itpfile_pep, topfile, grofile, trrfile, radius, frame_ra
 
 
 def average_molecule_structure(itpfile, topfile, grofile, trrfile, frame_iterator, box):
-    ''' Calculates the descriptor that characterizes the structure and dynamics
+    ''' NOT COMPLETED
+    Calculates the descriptor that characterizes the structure and dynamics
     of the PA assembly.
     Average PA molecule (mean and std of positions) is calculated 
     wrt to its center-of-mass and average orientation
@@ -700,6 +982,234 @@ def res_res_separation(itpfile, topfile, grofile, trrfile, radius, frame_iterato
 
 
 
+
+
+def bondorder(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    '''
+    Calculate the bond order of the 
+    '''
+
+    import freud
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+
+    # shift positions for freud and create box
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    
+    
+    n_bins_theta = 100
+    n_bins_phi = 100
+    bod = freud.environment.BondOrder((n_bins_theta, n_bins_phi))
+    
+    bod_array=[]
+    for frame in frame_iterator:
+        points = positions[frame].reshape(-1,3)
+
+        bod_array += [ bod.compute(system=(box, points), neighbors={'num_neighbors': 8, 'r_max': 2}).bond_order]
+    bod_array = np.mean(bod_array, axis=0)
+
+    # Clean up polar bins for plotting
+    bod_array = np.clip(bod_array, 0, np.percentile(bod_array, 99))
+    
+    return bod_array.T
+    
+
+
+
+
+def localdensity(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    '''
+    Calculate the local density of each residue around itself
+    '''
+
+    import freud
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+
+    # shift positions for freud and create box
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+
+    r_max=2
+    atom_diameter = 0.5
+    density = freud.density.LocalDensity(r_max=r_max, diameter=atom_diameter)
+
+    res_ld_mean=[]
+    res_ld_std=[]
+    
+    for i,atom_index in enumerate(atom_indices):
+        ld_ = []
+        for frame in frame_iterator:
+            points = positions[frame,:,atom_index]
+            ld_ += [ density.compute(system=(box, points), query_points=points, neighbors=dict(mode='ball', exclude_ii=True, r_max=r_max)).density]
+
+        res_ld_mean +=[ np.mean(ld_) ]
+        res_ld_std +=[ np.std(ld_) ]
+    
+    return res_names, res_ld_mean, res_ld_std
+
+
+
+
+
+
+def diffraction(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    '''
+    NOT COMPLETED
+    Calculate the diffraction pattern
+    '''
+
+    import freud
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    sc_bonds_permol = get_sidechain_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+
+    # shift positions for freud and create box
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+
+    dp = freud.diffraction.DiffractionPattern(grid_size=512, output_size=512)
+
+    points = positions[200,:,3]
+    orientation = [0.70710678, 0., 0.70710678, 0.]
+    dp.compute((box, points), view_orientation=orientation)
+
+    return dp
+    # res_ld_mean=[]
+    # res_ld_std=[]
+    
+    # for i,atom_index in enumerate(atom_indices):
+    #     sq_ = []
+    #     for frame in frame_iterator:
+    #         points = positions[frame,:,atom_index]
+    #         sq_ += [ dp.compute((box, points), view_orientation=[1, 0, 0, 0])]
+
+        # res_ld_mean +=[ np.mean(ld_) ]
+        # res_ld_std +=[ np.std(ld_) ]
+    
+    # return res_names, res_ld_mean, res_ld_std
 
 
 
