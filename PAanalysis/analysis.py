@@ -253,17 +253,24 @@ def res_Sq(itpfile, topfile, grofile, trrfile, frame_iterator, q):
     atom_indices = PAM_indices[::-1] + pep_indices
     res_names = ['PAM']*len(PAM_indices) + res_names
 
-    # q  = q.Treshape(3,-1)
-    Sq = []
-    for i,atom_index in enumerate(atom_indices):
-        tmp = []
-        for frame in frame_iterator:
-            R = positions[frame,:,atom_index]
-            ft = np.sum(np.exp(-1j*R.dot(q.T)), axis=0)
-            tmp += [(ft*ft.conjugate()).real/len(R)]
+    
+    R = positions[frame_iterator]
+    ft = np.sum(np.exp(-1j*R.dot(q.T)), axis=1)
+    Sq_ = (ft*ft.conjugate()).real/nmol
+    Sq = np.mean(Sq_, axis=0)[atom_indices]
+    
 
-        Sq += [ np.mean(tmp, axis=0) ]
-            
+    # Old code that uses for loop    
+    # Sq = []
+    # for i,atom_index in enumerate(atom_indices):
+    #     tmp = []
+    #     for frame in frame_iterator:
+    #         R = positions[frame,:,atom_index]
+    #         ft = np.sum(np.exp(-1j*R.dot(q.T)), axis=0)
+    #         tmp += [(ft*ft.conjugate()).real/len(R)]
+    #     Sq += [ np.mean(tmp, axis=0) ]
+    
+
     return res_names, Sq
 
 
