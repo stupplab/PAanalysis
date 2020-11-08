@@ -702,6 +702,146 @@ def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, b
 
 
 
+def hydration_profile_densityratio(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    ''' Calculate the rdf integral (water atoms) within the 1nm radius
+    '''
+
+    import freud
+    
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+    shape = positions.shape
+    nmol_W         = get_num_molecules(topfile, 'W')
+    positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
+    
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+    # calculate hydration of the first shell
+    global_density = nmol_W / (Lx*Ly*Lz)
+    r_max = 1 #nm
+    hydration  = []
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    positions_W -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    bins = 50; r_max = 1.5
+    for atom_index in atom_indices:
+        ld = freud.density.LocalDensity(r_max=r_max, diameter=0)
+        density_ = []
+        for frame in frame_iterator:
+            points_W = positions_W[frame]
+            query_points = positions[frame,:,atom_index]
+            ld.compute(system=(box, points_W), query_points=query_points)
+            density_ = [ ld.density ]
+        hydration += [ np.mean(density_)/global_density ]
+
+
+    return res_names, hydration
+
+
+
+
+
+
+def hydration_rdf(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    
+    import freud
+    
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+    shape = positions.shape
+    nmol_W         = get_num_molecules(topfile, 'W')
+    positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
+    
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+
+    # calculate hydration
+    rdf = []
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    positions_W -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    bins = 50; r_max = 1.5
+    for atom_index in atom_indices:
+        rdf_instance = freud.density.RDF(bins=bins, r_max=r_max, r_min=0)
+        for frame in frame_iterator:    
+            points_W = positions_W[frame]
+            query_points = positions[frame,:,atom_index]
+            rdf_instance.compute(system=(box, points_W), query_points=query_points, reset=False)
+        
+        bin_centers = rdf_instance.bin_centers
+        rdf += [ rdf_instance.rdf ]
+        
+
+    return res_names, bin_centers, rdf
+
+
+
+
 
 
 def binding(itpfile_PA, itpfile_pep, topfile, grofile, trrfile, radius, frame_range, box):
