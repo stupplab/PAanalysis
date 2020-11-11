@@ -702,7 +702,7 @@ def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, b
 
 
 
-def hydration_profile_densityratio(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+def hydration_profile_densityratio(itpfile, topfile, grofile, trrfile, radius, frame_iterator, box):
     ''' Calculate the rdf integral (water atoms) within the 1nm radius
     '''
 
@@ -748,24 +748,23 @@ def hydration_profile_densityratio(itpfile, topfile, grofile, trrfile, frame_ite
     atom_indices = PAM_indices[::-1] + pep_indices
     res_names = ['PAM']*len(PAM_indices) + res_names
 
-
     # calculate hydration of the first shell
     global_density = nmol_W / (Lx*Ly*Lz)
-    r_max = 1 #nm
+
     hydration  = []
     positions   -= [Lx/2,Ly/2,Lz/2]
     positions_W -= [Lx/2,Ly/2,Lz/2]
     box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-    bins = 50; r_max = 1.5
+    query_args = dict(mode='ball', r_max=radius, exclude_ii=False)
     for atom_index in atom_indices:
-        ld = freud.density.LocalDensity(r_max=r_max, diameter=0)
-        density_ = []
         for frame in frame_iterator:
             points_W = positions_W[frame]
             query_points = positions[frame,:,atom_index]
-            ld.compute(system=(box, points_W), query_points=query_points)
-            density_ = [ ld.density ]
-        hydration += [ np.mean(density_)/global_density ]
+            neighborhood = freud.locality.LinkCell(box, points_W, cell_width=radius)
+            neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
+            num_water = len(neighbor_pairs) / nmol
+        hydration += [ num_water/(4/3*np.pi*radius**3) / global_density ]
+        # hydration += [ num_water ]
 
 
     return res_names, hydration
