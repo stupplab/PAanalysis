@@ -757,14 +757,15 @@ def hydration_profile_densityratio(itpfile, topfile, grofile, trrfile, radius, f
     box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
     query_args = dict(mode='ball', r_max=radius, exclude_ii=False)
     for atom_index in atom_indices:
+        num_water = []
         for frame in frame_iterator:
             points_W = positions_W[frame]
             query_points = positions[frame,:,atom_index]
             neighborhood = freud.locality.LinkCell(box, points_W, cell_width=radius)
             neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
-            num_water = len(neighbor_pairs) / nmol
-        hydration += [ num_water/(4/3*np.pi*radius**3) / global_density ]
-        # hydration += [ num_water ]
+            num_water += [ len(neighbor_pairs) / nmol ]
+        hydration += [ np.mean(num_water) /(4/3*np.pi*radius**3) / global_density ]
+        # hydration += [ np.mean(num_water) *4/(4/3*np.pi*radius**3)] # convert to #H2O / nm^3
 
 
     return res_names, hydration
