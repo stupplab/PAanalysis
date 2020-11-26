@@ -769,7 +769,7 @@ def hydration_profile_densityratio(itpfile, topfile, grofile, trrfile, radius, f
         # hydration += [ np.mean(num_water) *4/(4/3*np.pi*radius**3)] # convert to #H2O / nm^3
 
 
-    return res_names, hydration
+    return res_names, np.array(hydration)
 
 
 
