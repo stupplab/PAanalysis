@@ -529,7 +529,7 @@ def res_rmsd_AUC(itpfile, topfile, grofile, trrfile, stride, box, delta_frames, 
 
     positions = positions[start_frame:]
     num_frames = positions.shape[0]
-    
+
     AUC = []
     frame_com = np.mean(positions, axis=(1,2)).reshape(num_frames,1,3)
     for atom_index in atom_indices:
@@ -938,7 +938,7 @@ def separation_time(itpfile, topfile, grofile, trrfile, radius, frame_iterator, 
 
         RT += [np.mean(RT_)]
 
-    return res_names, RT
+    return res_names, np.array(RT)
     
 
 
