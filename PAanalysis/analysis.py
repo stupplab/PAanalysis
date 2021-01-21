@@ -1459,7 +1459,99 @@ def diffraction(itpfile, topfile, grofile, trrfile, frame_iterator, box):
 
 
 
+def asphericity(itpfile, topfile, grofile, trrfile, frame_iterator, box):
+    """Calculate the asphericity of the largest alkyl tail cluster.
+    Asphericity = L1 - (L2+L3)/2
+    L1>L2>L3 are eigenvalues of gyration tensor - G
+    Gij = 1/N SUM_k[1,N] (ri^k - <ri>)*(rj^k - <rj>)
+    """
 
+    import freud
+    import scipy.linalg
+    
+
+    itpname = os.path.basename(itpfile).strip('.itp')
+    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
+    num_atoms    = get_num_atoms(itpfile)
+    nmol         = get_num_molecules(topfile, itpname)
+    start_index  = 0
+    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
+    num_frames = positions.shape[0]
+    positions = positions.reshape(-1,nmol,num_atoms,3)
+    shape = positions.shape
+    nmol_W         = get_num_molecules(topfile, 'W')
+    positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
+    
+    num_frames      = positions.shape[0]
+
+    Lx = box['Lx']
+    Ly = box['Ly']
+    Lz = box['Lz']
+
+
+    # atom indices from itpfile
+    pep_indices = []
+    PAM_indices = []
+    res_names = []
+    start = False
+    with open(itpfile, 'r') as f:
+        for line in f:
+            if '[ atoms ]' in line:
+                start = True
+                continue
+            if start:
+                words = line.split()
+                if words == []:
+                    break
+                if words[3] == 'PAM':
+                    PAM_indices += [int(words[0])-1]
+                else:
+                    pep_indices += [int(words[0])-1]
+                    res_names += [words[3]+'\n'+words[4]]
+
+    # reverse indices of PAM
+    atom_indices = PAM_indices[::-1] + pep_indices
+    res_names = ['PAM']*len(PAM_indices) + res_names
+
+    # Algorithm: get the largest cluster in the simulation using dbscan
+    # calculate its asphericity
+    
+    L1 = []
+    L2 = []
+    L3 = []
+    maxcluster_sizes = []
+    positions   -= [Lx/2,Ly/2,Lz/2]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    # query_args = dict(mode='nearest', num_neighbors=1, r_max=radius, exclude_ii=True)
+    for frame in frame_iterator:
+        points = positions[frame,:,:4].reshape(-1,3)
+        
+        # cluster
+        cl = freud.cluster.Cluster()
+        cl.compute((box, points), neighbors={'r_max': 0.8})
+        sizes = [len(c) for c in cl.cluster_keys]
+        argmax = np.argmax(sizes)
+        
+        points_largestcluster = points[cl.cluster_keys[argmax]]
+        
+        cl_props = freud.cluster.ClusterProperties()
+        cl_props.compute((box, points_largestcluster), [0]*sizes[argmax])
+        G = cl_props.gyrations[0]
+
+        L3_, L2_, L1_ = scipy.linalg.eigvalsh(G)
+
+        L1 += [L1_]
+        L2 += [L2_]
+        L3 += [L3_]
+        maxcluster_sizes += [sizes[argmax]]
+        
+
+    L1_avg = np.mean(L1)
+    L2_avg = np.mean(L2)
+    L3_avg = np.mean(L3)
+    maxcluster_size = np.mean(maxcluster_sizes)
+
+    return maxcluster_size, L1, L2, L3
 
 
 
