@@ -1538,7 +1538,7 @@ def asphericity(itpfile, topfile, grofile, trrfile, frame_iterator, box):
         cl_props.compute((box, points_largestcluster), [0]*sizes[argmax])
         G = cl_props.gyrations[0]
 
-        L3_, L2_, L1_ = scipy.linalg.eigvalsh(G)
+        L3_, L2_, L1_ = np.sort(scipy.linalg.eigvalsh(G))
 
         L1 += [L1_]
         L2 += [L2_]
