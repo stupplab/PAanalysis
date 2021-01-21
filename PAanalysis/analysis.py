@@ -1551,7 +1551,7 @@ def asphericity(itpfile, topfile, grofile, trrfile, frame_iterator, box):
     L3_avg = np.mean(L3)
     maxcluster_size = np.mean(maxcluster_sizes)
 
-    return maxcluster_size, L1, L2, L3
+    return maxcluster_size, L1_avg, L2_avg, L3_avg
 
 
 
