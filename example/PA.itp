@@ -1,0 +1,67 @@
+; MARTINI (martini22) Coarse Grained topology file for "PA"
+; Created by py version 2.4 
+; Using the following options:  -f PA_aa.pdb -o PA.top -x PA.pdb -name PA -ff martini22 -nt -ss CCCCCCCCCCCCCCCCCCCC
+; Sequence:
+; ZVVAAEE
+; Secondary Structure:
+; CCCCCCC
+
+[ moleculetype ]
+; Name         Exclusions
+PA                1
+
+[ atoms ]
+    1    P1     1   PAM    BB     1  0.0000 ; C
+    2    C1     1   PAM   SC1     2  0.0000 ; C
+    3    C1     1   PAM   SC2     3  0.0000 ; C
+    4    C1     1   PAM   SC3     4  0.0000 ; C
+    5    P5     2   VAL    BB     5  0.0000 ; C
+    6   AC2     2   VAL   SC1     6  0.0000 ; C
+    7    P5     3   VAL    BB     7  0.0000 ; C
+    8   AC2     3   VAL   SC1     8  0.0000 ; C
+    9    P4     4   ALA    BB     9  0.0000 ; C
+   10    P4     5   ALA    BB    10  0.0000 ; C
+   11    P5     6   GLU    BB    11  0.0000 ; C
+   12    P1     6   GLU   SC1    12  0.0000 ; C
+   13    P5     7   GLU    BB    13  0.0000 ; C
+   14    Qa     7   GLU   SC1    14 -1.0000 ; C
+
+[ bonds ]
+; Backbone bonds
+    1     5      1   0.47000  1250 ; PAM(C)-VAL(C)
+    5     7      1   0.35000  1250 ; VAL(C)-VAL(C)
+    7     9      1   0.35000  1250 ; VAL(C)-ALA(C)
+    9    10      1   0.35000  1250 ; ALA(C)-ALA(C)
+   10    11      1   0.35000  1250 ; ALA(C)-GLU(C)
+   11    13      1   0.35000  1250 ; GLU(C)-GLU(C)
+; Sidechain bonds
+    1     2      1   0.47000  1250 ; PAM
+    2     3      1   0.47000  1250 ; PAM
+    3     4      1   0.47000  1250 ; PAM
+   11    12      1   0.40000  5000 ; GLU
+   13    14      1   0.40000  5000 ; GLU
+
+[ constraints ]
+    5     6      1   0.26500 ; VAL
+    7     8      1   0.26500 ; VAL
+
+[ angles ]
+; Backbone angles
+    1     5     7      2    127    20 ; PAM(C)-VAL(C)-VAL(C)
+    5     7     9      2    127    20 ; VAL(C)-VAL(C)-ALA(C)
+    7     9    10      2    127    20 ; VAL(C)-ALA(C)-ALA(C)
+    9    10    11      2    127    20 ; ALA(C)-ALA(C)-GLU(C)
+   10    11    13      2    127    20 ; ALA(C)-GLU(C)-GLU(C)
+; Backbone-sidechain angles
+    2     1     5      2    100    25 ; PAM(C)-VAL(C) SBB
+    1     5     6      2    100    25 ; PAM(C)-VAL(C) SBB
+    5     7     8      2    100    25 ; VAL(C)-VAL(C) SBB
+   10    11    12      2    100    25 ; ALA(C)-GLU(C) SBB
+   11    13    14      2    100    25 ; GLU(C)-GLU(C) SBB
+; Sidechain angles
+    1     2     3      2    180    25 ; PAM
+    2     3     4      2    180    25 ; PAM
+
+[ dihedrals ]
+; Backbone dihedrals
+; Sidechain improper dihedrals

@@ -175,14 +175,14 @@ def get_num_molecules(topfile, name):
 
 
 
-def get_positions(gro, trr, atom_range):
+def get_positions(gro, trajfile, atom_range):
     """Returns all the wrapped positions the MARTINI simulation trajectory
     for a molecule. 
     Returns trajectory of atom_range = (start, end)
     """
 
 
-    traj = md.load_trr(trr, top=gro)
+    traj = md.load(trajfile, top=gro)
     
 
     positions = traj.xyz[:,atom_range[0]:atom_range[1]]

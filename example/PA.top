@@ -1,0 +1,16 @@
+#include "martini_v2.2.itp"
+#include "martini_v2.0_ions.itp"
+    
+
+  
+#include "PA.itp"
+    
+[ system ]
+; name
+Martini system from PA_aa.pdb
+    
+[ molecules ]
+; name        number
+PA       193
+W        14264
+NA+      193

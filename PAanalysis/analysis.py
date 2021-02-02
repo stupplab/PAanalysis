@@ -624,7 +624,7 @@ def res_rmsd_AUC_freud(itpfile, topfile, grofile, trrfile, box, delta_frames):
 
 
 
-def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, box):
+def hydration_profile(itpfile, topfile, grofile, trajfile, radius, frame_range, box):
     """Water density profile as you go from hydrophobic end to hydrophilic end
     """
     
@@ -640,7 +640,7 @@ def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, b
     positions = positions.reshape(-1,nmol,num_atoms,3)
     shape = positions.shape
     nmol_W         = get_num_molecules(topfile, 'W')
-    positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
+    positions_W    = get_positions(grofile, trajfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
 
     Lx = box['Lx']
     Ly = box['Ly']
@@ -699,78 +699,6 @@ def hydration_profile(itpfile, topfile, grofile, trrfile, radius, frame_range, b
 
 
     return res_names, hydration_profile_mean, hydration_profile_std
-
-
-
-
-def hydration_profile_densityratio(itpfile, topfile, grofile, trrfile, radius, frame_iterator, box):
-    ''' Calculate the rdf integral (water atoms) within the 1nm radius
-    '''
-
-    import freud
-    
-    itpname = os.path.basename(itpfile).strip('.itp')
-    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
-    num_atoms    = get_num_atoms(itpfile)
-    nmol         = get_num_molecules(topfile, itpname)
-    start_index  = 0
-    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
-    num_frames = positions.shape[0]
-    positions = positions.reshape(-1,nmol,num_atoms,3)
-    shape = positions.shape
-    nmol_W         = get_num_molecules(topfile, 'W')
-    positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
-    
-    Lx = box['Lx']
-    Ly = box['Ly']
-    Lz = box['Lz']
-
-    # atom indices from itpfile
-    pep_indices = []
-    PAM_indices = []
-    res_names = []
-    start = False
-    with open(itpfile, 'r') as f:
-        for line in f:
-            if '[ atoms ]' in line:
-                start = True
-                continue
-            if start:
-                words = line.split()
-                if words == []:
-                    break
-                if words[3] == 'PAM':
-                    PAM_indices += [int(words[0])-1]
-                else:
-                    pep_indices += [int(words[0])-1]
-                    res_names += [words[3]+'\n'+words[4]]
-
-    # reverse indices of PAM
-    atom_indices = PAM_indices[::-1] + pep_indices
-    res_names = ['PAM']*len(PAM_indices) + res_names
-
-    # calculate hydration of the first shell
-    global_density = nmol_W / (Lx*Ly*Lz)
-
-    hydration  = []
-    positions   -= [Lx/2,Ly/2,Lz/2]
-    positions_W -= [Lx/2,Ly/2,Lz/2]
-    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-    query_args = dict(mode='ball', r_max=radius, exclude_ii=False)
-    for atom_index in atom_indices:
-        num_water = []
-        for frame in frame_iterator:
-            points_W = positions_W[frame]
-            query_points = positions[frame,:,atom_index]
-            neighborhood = freud.locality.LinkCell(box, points_W, cell_width=radius)
-            neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
-            num_water += [ len(neighbor_pairs) / nmol ]
-        hydration += [ np.mean(num_water) /(4/3*np.pi*radius**3) / global_density ]
-        # hydration += [ np.mean(num_water) *4/(4/3*np.pi*radius**3)] # convert to #H2O / nm^3
-
-
-    return res_names, np.array(hydration)
-
 
 
 
@@ -840,106 +768,6 @@ def hydration_rdf(itpfile, topfile, grofile, trrfile, frame_iterator, box):
 
     return res_names, bin_centers, rdf
 
-
-
-
-
-def separation_time(itpfile, topfile, grofile, trrfile, radius, frame_iterator, box):
-    '''Calculates the residence time (RT) of a residue around itself. RT is calculated
-    as the average time taken by the closest neighbor to travel radius distance away from the residue.
-    
-    If frame_iterator contains frames after each nanosecond, then RT is in nanoseconds
-    '''
-
-    import freud
-    
-    itpname = os.path.basename(itpfile).strip('.itp')
-    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
-    num_atoms    = get_num_atoms(itpfile)
-    nmol         = get_num_molecules(topfile, itpname)
-    start_index  = 0
-    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
-    num_frames = positions.shape[0]
-    positions = positions.reshape(-1,nmol,num_atoms,3)
-    shape = positions.shape
-    nmol_W         = get_num_molecules(topfile, 'W')
-    positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
-    
-    num_frames      = positions.shape[0]
-
-    Lx = box['Lx']
-    Ly = box['Ly']
-    Lz = box['Lz']
-
-    # atom indices from itpfile
-    pep_indices = []
-    PAM_indices = []
-    res_names = []
-    start = False
-    with open(itpfile, 'r') as f:
-        for line in f:
-            if '[ atoms ]' in line:
-                start = True
-                continue
-            if start:
-                words = line.split()
-                if words == []:
-                    break
-                if words[3] == 'PAM':
-                    PAM_indices += [int(words[0])-1]
-                else:
-                    pep_indices += [int(words[0])-1]
-                    res_names += [words[3]+'\n'+words[4]]
-
-    # reverse indices of PAM
-    atom_indices = PAM_indices[::-1] + pep_indices
-    res_names = ['PAM']*len(PAM_indices) + res_names
-
-
-
-    # Calculate RT
-    RT = []
-    positions   -= [Lx/2,Ly/2,Lz/2]
-    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-    query_args = dict(mode='nearest', num_neighbors=1, r_max=radius, exclude_ii=True)
-    for atom_index in atom_indices:
-        pairs_sampled = [] # list of all [res1, res2, startframe]
-        RT_ = []
-        closest_neigh_dist_ = []
-        for frame in frame_iterator:
-            points = positions[frame,:,atom_index]
-            neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
-            neighbor_pairs = np.array(neighborhood.query(points, query_args).toNeighborList())
-            
-            # Remove pairs that are in cross-periodic images
-            sep = np.linalg.norm(points[neighbor_pairs[:,1]]-points[neighbor_pairs[:,0]], axis=1)
-            neighbor_pairs = np.compress(sep<min([Lx,Ly,Lz])/2, neighbor_pairs, axis=0)
-            sep = np.compress(sep<min([Lx,Ly,Lz])/2, sep, axis=0)
-            
-            # Track these neighbor pairs to caluclate RT
-            args = list(range(len(neighbor_pairs)))
-            for frame2 in range(frame+1, num_frames):
-                if args == []:
-                    break
-
-                points2 = positions[frame2,:,atom_index]
-                sep2 = np.linalg.norm(points[neighbor_pairs[:,0]] - points2[neighbor_pairs[:,1]], axis=1)
-
-                # remove pairs with neighbor in different box images
-                args = np.compress(sep2[args] < min([Lx,Ly,Lz])/2, args, axis=0)
-
-                # remove neighbors that moved away radius distance
-                # add the time to RT
-                condition = sep2[args]<radius+sep[args]
-                num_pairs_separated_this_time = len(args)-np.sum(condition)
-                RT_ += [(frame2-frame)]*num_pairs_separated_this_time
-                args = np.compress(condition, args, axis=0)
-                # args_ = np.compress(sep2[args]>=radius, args, axis=0)
-
-        RT += [np.mean(RT_)]
-
-    return res_names, np.array(RT)
-    
 
 
 
@@ -1458,100 +1286,6 @@ def diffraction(itpfile, topfile, grofile, trrfile, frame_iterator, box):
     # return res_names, res_ld_mean, res_ld_std
 
 
-
-def asphericity(itpfile, topfile, grofile, trrfile, frame_iterator, box):
-    """Calculate the asphericity of the largest alkyl tail cluster.
-    Asphericity = L1 - (L2+L3)/2
-    L1>L2>L3 are eigenvalues of gyration tensor - G
-    Gij = 1/N SUM_k[1,N] (ri^k - <ri>)*(rj^k - <rj>)
-    """
-
-    import freud
-    import scipy.linalg
-    
-
-    itpname = os.path.basename(itpfile).strip('.itp')
-    bb_bonds_permol = get_backbone_bonds_permol(itpfile)
-    num_atoms    = get_num_atoms(itpfile)
-    nmol         = get_num_molecules(topfile, itpname)
-    start_index  = 0
-    positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
-    num_frames = positions.shape[0]
-    positions = positions.reshape(-1,nmol,num_atoms,3)
-    shape = positions.shape
-    nmol_W         = get_num_molecules(topfile, 'W')
-    positions_W    = get_positions(grofile, trrfile, (num_atoms*nmol, num_atoms*nmol+nmol_W))
-    
-    num_frames      = positions.shape[0]
-
-    Lx = box['Lx']
-    Ly = box['Ly']
-    Lz = box['Lz']
-
-
-    # atom indices from itpfile
-    pep_indices = []
-    PAM_indices = []
-    res_names = []
-    start = False
-    with open(itpfile, 'r') as f:
-        for line in f:
-            if '[ atoms ]' in line:
-                start = True
-                continue
-            if start:
-                words = line.split()
-                if words == []:
-                    break
-                if words[3] == 'PAM':
-                    PAM_indices += [int(words[0])-1]
-                else:
-                    pep_indices += [int(words[0])-1]
-                    res_names += [words[3]+'\n'+words[4]]
-
-    # reverse indices of PAM
-    atom_indices = PAM_indices[::-1] + pep_indices
-    res_names = ['PAM']*len(PAM_indices) + res_names
-
-    # Algorithm: get the largest cluster in the simulation using dbscan
-    # calculate its asphericity
-    
-    L1 = []
-    L2 = []
-    L3 = []
-    maxcluster_sizes = []
-    positions   -= [Lx/2,Ly/2,Lz/2]
-    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-    # query_args = dict(mode='nearest', num_neighbors=1, r_max=radius, exclude_ii=True)
-    for frame in frame_iterator:
-        points = positions[frame,:,:4].reshape(-1,3)
-        
-        # cluster
-        cl = freud.cluster.Cluster()
-        cl.compute((box, points), neighbors={'r_max': 0.8})
-        sizes = [len(c) for c in cl.cluster_keys]
-        argmax = np.argmax(sizes)
-        
-        points_largestcluster = points[cl.cluster_keys[argmax]]
-        
-        cl_props = freud.cluster.ClusterProperties()
-        cl_props.compute((box, points_largestcluster), [0]*sizes[argmax])
-        G = cl_props.gyrations[0]
-
-        L3_, L2_, L1_ = np.sort(scipy.linalg.eigvalsh(G))
-
-        L1 += [L1_]
-        L2 += [L2_]
-        L3 += [L3_]
-        maxcluster_sizes += [sizes[argmax]]
-        
-
-    L1_avg = np.mean(L1)
-    L2_avg = np.mean(L2)
-    L3_avg = np.mean(L3)
-    maxcluster_size = np.mean(maxcluster_sizes)
-
-    return maxcluster_size, L1_avg, L2_avg, L3_avg
 
 
 

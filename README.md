@@ -6,10 +6,10 @@ Python scripts for analysing MARTINI simulations of peptide amphiphiles.
 
 
 ## Software prerequisites:
-- Python3
+- Python3 (Tested using python3.8)
 - numpy
 - mdtraj
-- freud (for selective routines)
+- freud (for selective routines) https://freud.readthedocs.io/
 
 You can download and install the package as
     
