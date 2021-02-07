@@ -104,7 +104,7 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator):
             positions_ = positions.reshape(-1,nmols[i],num_atomss[i],3)
             positions_ = positions_[frame,:,PAM_indicess[i]].reshape(-1,3)
             points = np.append(points,positions_, axis=0)
-            
+        
         # cluster
         cl = freud.cluster.Cluster()
         cl.compute((box, points), neighbors={'r_max': 0.8})
@@ -112,7 +112,7 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator):
         argmax = np.argmax(sizes)
         
         points_largestcluster = points[cl.cluster_keys[argmax]]
-        
+
         cl_props = freud.cluster.ClusterProperties()
         cl_props.compute((box, points_largestcluster), [0]*sizes[argmax])
         G = cl_props.gyrations[0]
