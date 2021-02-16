@@ -103,7 +103,7 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
         for frame in frame_iterator:
             Lx, Ly, Lz = traj.unitcell_lengths[frame]
             box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-            points_W = positions_W[frame]\
+            points_W = positions_W[frame]
             points_W -= [Lx/2,Ly/2,Lz/2]
             query_points = positions[frame,:,atom_index]
             query_points -= [Lx/2,Ly/2,Lz/2]
