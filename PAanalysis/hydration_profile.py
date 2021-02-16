@@ -47,8 +47,7 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
     
     # Get Lx, Ly, Lz
     traj = mdtraj.load(trajfile, top=grofile)
-    Lx, Ly, Lz = traj.unitcell_lengths[-1]
-    box = dict(Lx=Lx, Ly=Ly, Lz=Lz)
+
 
     # atom indices from itpfile
     PAM_indicess = []
@@ -93,20 +92,21 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
     pep_indices = pep_indicess[whichitp]
     atom_indices = PAM_indices[::-1] + pep_indices
     
-    
+
     # calculate hydration profile
     global_water_density = nmol_W / (Lx*Ly*Lz)
 
     hydration  = []
-    positions   -= [Lx/2,Ly/2,Lz/2]
-    positions_W -= [Lx/2,Ly/2,Lz/2]
-    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
     query_args = dict(mode='ball', r_max=radius, exclude_ii=False)
     for atom_index in atom_indices:
         num_water = []
         for frame in frame_iterator:
-            points_W = positions_W[frame]
+            Lx, Ly, Lz = traj.unitcell_lengths[frame]
+            box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+            points_W = positions_W[frame]\
+            points_W -= [Lx/2,Ly/2,Lz/2]
             query_points = positions[frame,:,atom_index]
+            query_points -= [Lx/2,Ly/2,Lz/2]
             neighborhood = freud.locality.LinkCell(box, points_W, cell_width=radius)
             neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
             num_water += [ len(neighbor_pairs) / nmol ]

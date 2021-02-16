@@ -44,8 +44,7 @@ def residence_time(itpfile, topfile, grofile, trajfile, radius, frame_iterator):
 
     # Get Lx, Ly, Lz
     traj = mdtraj.load(trajfile, top=grofile)
-    Lx, Ly, Lz = traj.unitcell_lengths[-1]
-    box = dict(Lx=Lx, Ly=Ly, Lz=Lz)
+    
 
     # atom indices from itpfile
     pep_indices = []
@@ -75,15 +74,16 @@ def residence_time(itpfile, topfile, grofile, trajfile, radius, frame_iterator):
 
     # Calculate RT
     RT = []
-    positions   -= [Lx/2,Ly/2,Lz/2]
-    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
     query_args = dict(mode='nearest', num_neighbors=1, r_max=radius, exclude_ii=True)
     for atom_index in atom_indices:
         pairs_sampled = [] # list of all [res1, res2, startframe]
         RT_ = []
         closest_neigh_dist_ = []
         for frame in frame_iterator:
+            Lx, Ly, Lz = traj.unitcell_lengths[frame]
+            box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
             points = positions[frame,:,atom_index]
+            points -= [Lx/2,Ly/2,Lz/2]
             neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
             neighbor_pairs = np.array(neighborhood.query(points, query_args).toNeighborList())
             

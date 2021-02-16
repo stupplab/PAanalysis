@@ -58,8 +58,6 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator):
     
     # Get Lx, Ly, Lz
     traj = mdtraj.load(trajfile, top=grofile)
-    Lx, Ly, Lz = traj.unitcell_lengths[-1]
-    box = dict(Lx=Lx, Ly=Ly, Lz=Lz)
 
     # atom indices from itpfile
     PAM_indicess = []
@@ -95,16 +93,22 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator):
     L2 = []
     L3 = []
     maxcluster_sizes = []
-    positionss = [positions - [Lx/2,Ly/2,Lz/2] for positions in positionss]
-    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    
+    # positionss = [positions - [Lx/2,Ly/2,Lz/2] for positions in positionss]
+    
     # query_args = dict(mode='nearest', num_neighbors=1, r_max=radius, exclude_ii=True)
     for frame in frame_iterator:
+        Lx, Ly, Lz = traj.unitcell_lengths[frame]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+        
         points = np.empty((0,3))
         for i,positions in enumerate(positionss):
             positions_ = positions.reshape(-1,nmols[i],num_atomss[i],3)
             positions_ = positions_[frame,:,PAM_indicess[i]].reshape(-1,3)
             points = np.append(points,positions_, axis=0)
         
+        points -= [Lx/2,Ly/2,Lz/2]
+
         # cluster
         cl = freud.cluster.Cluster()
         cl.compute((box, points), neighbors={'r_max': 0.8})
