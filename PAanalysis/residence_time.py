@@ -95,23 +95,22 @@ def residence_time(itpfile, topfile, grofile, trajfile, radius, frame_iterator):
             # Track these neighbor pairs to caluclate RT
             args = list(range(len(neighbor_pairs)))
             for frame2 in range(frame+1, num_frames):
-                if args == []:
+                if len(args) == 0:
                     break
-
                 points2 = positions[frame2,:,atom_index]
+                points2 -= [Lx/2,Ly/2,Lz/2]
                 sep2 = np.linalg.norm(points[neighbor_pairs[:,0]] - points2[neighbor_pairs[:,1]], axis=1)
-
+                
                 # remove pairs with neighbor in different box images
                 args = np.compress(sep2[args] < min([Lx,Ly,Lz])/2, args, axis=0)
-
+                
                 # remove neighbors that moved away radius distance
                 # add the time to RT
-                condition = sep2[args]<radius+sep[args]
+                condition = sep2[args]<(radius+sep[args])
                 num_pairs_separated_this_time = len(args)-np.sum(condition)
                 RT_ += [(frame2-frame)]*num_pairs_separated_this_time
                 args = np.compress(condition, args, axis=0)
-                # args_ = np.compress(sep2[args]>=radius, args, axis=0)
-
+            
         RT += [np.mean(RT_)]
 
     return res_names, np.array(RT)

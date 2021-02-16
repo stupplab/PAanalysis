@@ -23,9 +23,10 @@ print('Number of frames in PA_water_eq.xtc: ', len(traj))
 
 
 frame_iterator = range(300,500,10)
-max_cluster_size, L1, L2, L3 = PAanalysis.gyration_moments([itpfile], topfile, grofile, trajfile, frame_iterator)
+residue_indices = [[0,1,2,3]]
+max_cluster_size, L1, L2, L3 = PAanalysis.gyration_moments([itpfile], topfile, grofile, trajfile, frame_iterator, residue_indices)
 print('\n----------------- Using PAanalysis.gyration_moments -----------------')
-print('\n Number of molecules in the largest cluster: ', max_cluster_size)
+print('\n Number of residues in the largest cluster: ', max_cluster_size)
 print('\n Eigenvalues of gyration tensor: ', L1, L2, L3)
 print('\n Aspericity (L1-0.5*(L2+L3)): ', L1-0.5*(L2+L3))
 print('\n Acylindricity (L2-L3): ', (L2+L3))
