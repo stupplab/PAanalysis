@@ -95,7 +95,6 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
 
     # calculate hydration profile
     
-    
     hydration  = []
     query_args = dict(mode='ball', r_max=radius, exclude_ii=False)
     for atom_index in atom_indices:
@@ -104,7 +103,7 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
         for frame in frame_iterator:
             Lx, Ly, Lz = traj.unitcell_lengths[frame]
             box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-            points_W = positions_W[frame]
+            points_W = np.copy(positions_W[frame])
             points_W -= [Lx/2,Ly/2,Lz/2]
             query_points = positions[frame,:,atom_index]
             query_points -= [Lx/2,Ly/2,Lz/2]
@@ -112,10 +111,9 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
             neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
             num_water += [ len(neighbor_pairs) / nmol ]
             global_water_density += [nmol_W / (Lx*Ly*Lz)]
-
+        
         hydration += [ np.mean((np.array(num_water)/(4/3*np.pi*radius**3)) / np.array(global_water_density)) ]
         # hydration += [ np.mean(num_water) *4/(4/3*np.pi*radius**3)] # convert to #H2O / nm^3
 
-
-    return res_names, np.array(hydration), global_water_density
+    return res_names, np.array(hydration), np.mean(global_water_density)
 
