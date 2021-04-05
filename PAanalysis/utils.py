@@ -192,6 +192,62 @@ def get_positions(gro, trajfile, atom_range):
 
 
 
+def get_num_atoms_fromGRO(filename):
+    # Returns the number in the 2nd line of grofile
+
+    num_atoms = 0
+    
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+        num_atoms = int(lines[1].split()[0])
+
+    return num_atoms
+
+
+def get_num_molecules_fromtop(topfile, molname):
+    # Get the number of Protein from the [ molecules ] section
+
+    with open(topfile, 'r') as f:
+        lines = f.readlines()
+        start = False
+        for i,line in enumerate(lines):
+            if '#mols' in line:
+                words = lines[i+1].split()
+                if molname == words[0]:
+                    num_molecules = int(words[1])
+                    break
+        return num_molecules
+
+
+def get_num_atoms_fromtop(topfile, molname):
+    # Get the number of Protein from the [ molecules ] section
+
+    with open(topfile, 'r') as f:
+        lines = f.readlines()
+    
+    start1 = False
+    start2 = False
+    num_atoms = 0
+    for i,line in enumerate(lines):
+        if '[ moleculetype ]' in line:
+            if molname in ''.join(lines[i+1:i+3]):
+                start1 = True
+                continue
+        if start1:
+            if '[ atoms ]' in line:
+                start2 = True
+                continue
+        if start2:
+            words = line.split()
+            if len(words) == 0:
+                continue
+            if words[0].isdigit():
+                num_atoms += 1
+            if words[0] == '[':
+                break
+    
+    return num_atoms
+
 
 def unwrap_points(points, ref_points, Lx, Ly, Lz):
     """Accepts two arrays of points in 3D and box dimensions.
@@ -203,25 +259,44 @@ def unwrap_points(points, ref_points, Lx, Ly, Lz):
 
     shape = points.shape
 
-    points = points.reshape(-1,3)
-    ref_points = ref_points.reshape(-1,3)
+    points = np.copy(points.reshape(-1,3))
+    ref_points = np.copy(ref_points.reshape(-1,3))
     
-    for i in range(len(points)):
-        if points[i,0]-ref_points[i,0] > Lx/2:
-            points[i,0] -= Lx
-        elif points[i,0]-ref_points[i,0] < -Lx/2:
-            points[i,0] += Lx
+    filtr = points[:,0]-ref_points[:,0] > Lx/2
+    points[filtr,0] -= Lx
 
-        if points[i,1]-ref_points[i,1] > Ly/2:
-            points[i,1] -= Ly
-        elif points[i,1]-ref_points[i,1] < -Ly/2:
-            points[i,1] += Ly
+    filtr = points[:,0]-ref_points[:,0] < -Lx/2
+    points[filtr,0] += Lx
+
+    filtr = points[:,1]-ref_points[:,1] > Ly/2
+    points[filtr,1] -= Ly
+
+    filtr = points[:,1]-ref_points[:,1] < -Ly/2
+    points[filtr,1] += Ly
+
+    filtr = points[:,2]-ref_points[:,2] > Lz/2
+    points[filtr,2] -= Lz
+
+    filtr = points[:,2]-ref_points[:,2] < -Lz/2
+    points[filtr,2] += Lz
 
 
-        if points[i,2]-ref_points[i,2] > Lz/2:
-            points[i,2] -= Lz
-        elif points[i,2]-ref_points[i,2] < -Lz/2:
-            points[i,2] += Lz
+    # for i in range(len(points)):
+    #     if points[i,0]-ref_points[i,0] > Lx/2:
+    #         points[i,0] -= Lx
+    #     elif points[i,0]-ref_points[i,0] < -Lx/2:
+    #         points[i,0] += Lx
+
+    #     if points[i,1]-ref_points[i,1] > Ly/2:
+    #         points[i,1] -= Ly
+    #     elif points[i,1]-ref_points[i,1] < -Ly/2:
+    #         points[i,1] += Ly
+
+
+    #     if points[i,2]-ref_points[i,2] > Lz/2:
+    #         points[i,2] -= Lz
+    #     elif points[i,2]-ref_points[i,2] < -Lz/2:
+    #         points[i,2] += Lz
 
 
     return points.reshape(shape)

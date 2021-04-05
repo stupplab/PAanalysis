@@ -82,7 +82,7 @@ def residence_time(itpfile, topfile, grofile, trajfile, radius, frame_iterator):
         for frame in frame_iterator:
             Lx, Ly, Lz = traj.unitcell_lengths[frame]
             box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-            points = positions[frame,:,atom_index]
+            points = np.copy(positions[frame,:,atom_index])
             points -= [Lx/2,Ly/2,Lz/2]
             neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
             neighbor_pairs = np.array(neighborhood.query(points, query_args).toNeighborList())
@@ -97,7 +97,7 @@ def residence_time(itpfile, topfile, grofile, trajfile, radius, frame_iterator):
             for frame2 in range(frame+1, num_frames):
                 if len(args) == 0:
                     break
-                points2 = positions[frame2,:,atom_index]
+                points2 = np.copy(positions[frame2,:,atom_index])
                 points2 -= [Lx/2,Ly/2,Lz/2]
                 sep2 = np.linalg.norm(points[neighbor_pairs[:,0]] - points2[neighbor_pairs[:,1]], axis=1)
                 

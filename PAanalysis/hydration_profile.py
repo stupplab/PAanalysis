@@ -105,7 +105,7 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
             box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
             points_W = np.copy(positions_W[frame])
             points_W -= [Lx/2,Ly/2,Lz/2]
-            query_points = positions[frame,:,atom_index]
+            query_points = np.copy(positions[frame,:,atom_index])
             query_points -= [Lx/2,Ly/2,Lz/2]
             neighborhood = freud.locality.LinkCell(box, points_W, cell_width=radius)
             neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
@@ -116,4 +116,96 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
         # hydration += [ np.mean(num_water) *4/(4/3*np.pi*radius**3)] # convert to #H2O / nm^3
 
     return res_names, np.array(hydration), np.mean(global_water_density)
+
+
+
+
+
+
+def hydration_profile_atomistic(grofile, trajfile, radius, frame_iterator, num_atoms, num_molecules, start_index):
+    """
+    Residue-wise hydration profile for atomistic simulations (tested for GROMACS simulations)
+    num_atoms, num_molecules, start_index correspond to the molecule of interest.
+    Assumes that all the identical molecules are consecutive
+    Averages over only the backbone atoms vs all atoms
+    Alkyl residue name should be added in this code. Currently only C16 and 12C
+    """
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+
+    # Get water indices
+    W_indices = []
+    for residue in traj.top.residues:
+        if residue.is_water:
+            W_indices += [residue.atom('O').index]
+    nmol_W = len(W_indices)
+    
+    # Get atom_indices for N CA C O for all residues
+    atom_indices = []
+    start_res_id = traj.top.atom(start_index).residue.index
+    end_res_id   = traj.top.atom( start_index + num_atoms*num_molecules - 1 ).residue.index
+    num_residues_permol = (end_res_id - start_res_id + 1) / num_molecules
+    if num_residues_permol % 1 != 0:
+        raise ValueError('Number of residues per mol is calculated as a non-integer')
+    else:
+        num_residues_permol = int(num_residues_permol)    
+    
+    res_names = []
+    for i in range(start_res_id, start_res_id+num_residues_permol):
+        res_names += [ traj.top.residue(i).name ]
+
+    # Caluclate atom_indices for each residue
+    for j in range(start_res_id, end_res_id+1):
+        res = traj.top.residue(j)
+        atom_indices_ = [ a.index for a in res.atoms ]
+        atom_indices += [atom_indices_]
+
+    
+    # Place water into grid cells using freud and generate the neighborhood for each frame
+    query_args = dict(mode='ball', r_max=radius, exclude_ii=False)
+    global_water_density = []
+    neighborhoods = []
+    neighbor_pairs = []
+    for frame in frame_iterator:
+        Lx, Ly, Lz = traj.unitcell_lengths[frame]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+        points_W = np.copy(positions[frame, W_indices])
+        points_W -= [Lx/2,Ly/2,Lz/2]
+        neighborhood = freud.locality.LinkCell(box, points_W, cell_width=radius)
+        neighborhoods += [ neighborhood ]
+        global_water_density += [nmol_W / (Lx*Ly*Lz)]
+        
+
+
+    # calculate hydration profile over residues of each molecule
+    hydration  = []
+    hydration_ = []
+    n=0
+    for atom_indices_ in atom_indices:
+        n=n+1
+        
+        num_water = []
+        for k,frame in enumerate(frame_iterator):
+            query_points = np.copy(positions[frame,atom_indices_])
+            query_points -= [Lx/2,Ly/2,Lz/2]
+            neighborhood = neighborhoods[k]
+            neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
+            num_water += [ len(neighbor_pairs) / (num_molecules*len(atom_indices_)) ]
+
+        
+        hydration_ += [ np.mean((np.array(num_water)/(4/3*np.pi*radius**3)) / np.array(global_water_density)) ]
+
+        if n == num_residues_permol:
+            hydration += [ hydration_ ]
+            hydration_ = []
+            n = 0
+
+    hydration = np.mean(hydration, axis=0)
+
+    return res_names, hydration, np.mean(global_water_density)
+
+
 
