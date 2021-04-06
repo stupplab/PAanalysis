@@ -74,42 +74,12 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator, resid
         for i in range(len(itpfiles)):
             residue_indices += [range(num_atomss[i])]
 
-    # atom indices from itpfile
-    # PAM_indicess = []
-    # for itpfile in itpfiles:
-    #     pep_indices = []
-    #     PAM_indices = []
-    #     res_names = []
-    #     start = False
-    #     with open(itpfile, 'r') as f:
-    #         for line in f:
-    #             if '[ atoms ]' in line:
-    #                 start = True
-    #                 continue
-    #             if start:
-    #                 words = line.split()
-    #                 if words == []:
-    #                     break
-    #                 if words[3] == 'PAM':
-    #                     PAM_indices += [int(words[0])-1]
-    #                 else:
-    #                     pep_indices += [int(words[0])-1]
-    #                     res_names += [words[3]+'\n'+words[4]]
-
-    #     # reverse indices of PAM
-    #     atom_indices = PAM_indices[::-1] + pep_indices
-    #     res_names = ['PAM']*len(PAM_indices) + res_names
-        
-    #     PAM_indicess += [PAM_indices]
-
 
 
     L1 = []
     L2 = []
     L3 = []
     maxcluster_sizes = []
-    
-    # positionss = [positions - [Lx/2,Ly/2,Lz/2] for positions in positionss]
     
     # query_args = dict(mode='nearest', num_neighbors=1, r_max=radius, exclude_ii=True)
     for frame in frame_iterator:
