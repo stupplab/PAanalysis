@@ -37,7 +37,7 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
         
         if len(hbonds) ==0:
             hbonds = hbonds.reshape((0,3))
-            
+
         framewise_hbonds += [ hbonds ]
 
         hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
@@ -63,7 +63,8 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
     for i,f in enumerate(frame_iterator):
         Lx, Ly, Lz = traj.unitcell_lengths[f]
         hbonds = framewise_hbonds[i]
-
+        if len(hbonds)==0:
+            continue
         num_hbonds += len(hbonds)
         posH = positions[f,hbonds[:,1]]
         posD = utils.unwrap_points(positions[f,hbonds[:,0]], posH, Lx, Ly, Lz)
