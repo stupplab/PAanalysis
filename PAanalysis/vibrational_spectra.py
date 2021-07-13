@@ -183,8 +183,8 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
         plt.ylabel('FT')
         plt.subplots_adjust(bottom=0.18, left=0.16)
         plt.savefig(filenameft, dpi=400)
-
-    
+        
+        
     #---------------------------------------------------------------------------------
 
 

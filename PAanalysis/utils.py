@@ -4,8 +4,8 @@ Utility functions to be used by analyze.py
 
 import numpy as np
 import mdtraj as md
-
-
+import itertools
+import scipy.linalg
 
 ##################################### Secondary methods #####################################
 
@@ -301,6 +301,53 @@ def unwrap_points(points, ref_points, Lx, Ly, Lz):
 
     return points.reshape(shape)
 
+
+
+
+def find_box_images(positions, unitcell_lengths):
+    """
+    Go frame by frame from the start and identify particle box images
+    by the sudden shift in coordinate
+    """
+    num_frames = positions.shape[0]
+    images = np.zeros((positions.shape[0], positions.shape[1], 3))
+    for f in range(1,num_frames):
+        Lx, Ly, Lz = unitcell_lengths[f]
+        
+        images[f] = np.copy(images[f-1])
+
+        filtr = (positions[f,:,0] - positions[f-1,:,0]) < -Lx/2
+        images[f,filtr,0] = images[f,filtr,0] + 1        
+        filtr = (positions[f,:,0] - positions[f-1,:,0]) > Lx/2
+        images[f,filtr,0] = images[f,filtr,0] - 1
+
+        filtr = positions[f,:,1] - positions[f-1,:,1] < -Ly/2
+        images[f,filtr,1] = images[f,filtr,1] + 1
+        filtr = positions[f,:,1] - positions[f-1,:,1] > Ly/2        
+        images[f,filtr,1] = images[f,filtr,1] - 1
+
+        filtr = positions[f,:,2] - positions[f-1,:,2] < -Lz/2
+        images[f,filtr,2] = images[f,filtr,2] + 1
+        filtr = positions[f,:,2] - positions[f-1,:,2] > Lz/2
+        images[f,filtr,2] = images[f,filtr,2] - 1
+
+    return images
+
+
+
+def gyration(points):
+    # Calculate gyration eigenvectors using only backbone atoms
+    # Gij = 1/N SUM_n:1_N [ rn_i * rn_j ]
+    # Remember to unwrap  of box images
+
+    points -= np.mean(points, axis=0)
+    G = np.zeros((3,3))
+    for i,j in itertools.product(range(3),range(3)):
+        G[i,j] = np.mean(points[:,i]*points[:,j])
+    
+    w,eigvec = scipy.linalg.eig(G)
+    
+    return w,eigvec
 
 
 

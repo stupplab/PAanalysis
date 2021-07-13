@@ -19,21 +19,30 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
      (See mdtraj documentation for more info)
     Hbond criteria: DHA angle > 2*np.pi/3  and H-A separation < 2.5 A
     """
-
+    
     traj = mdtraj.load(trajfile, top=grofile)
     
     positions = traj.xyz
-
+    
     hbonds_all = np.empty((0,3))
     framewise_hbonds = []
     for f in frame_iterator:
         hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        
         framewise_hbonds += [ hbonds ]
         hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
         
     hbonds_all = np.unique(hbonds_all, axis=0)
     
+    
 
+    
     num_hbonds_all = len(hbonds_all)
 
     r_DH=[]
@@ -94,7 +103,113 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
             np.std(r_DA_all),
             num_hbonds_all)
 
+
+
+
+def Hbond_chirality():
+    """TODO
+    """
+
+
+
+def Hbond_orientation(grofile, trajfile, frame_iterator, eig_index):
+    """
+    NOTE: For atomistic simulations
+    Calculates baker-hubbard hydrogen bond for frame_iterator
     
+    Calculates the fluctuation of the direction O-H bond as 
+    theta is angle between the OH orientation and it's average.
+
+    Calculates Hbond orientation wrt to its molecule and wrt to the fiber axis
+    eig_index: {0,1,2} 0: largest eigenvalue 2: lowest eigenvalue 
+    eigenvectors are ussed for calculating the fiber axis 
+    and are calculated using the peptide backbone.
+
+    spatial_fluctuation 
+
+    Hbond criteria: DHA angle > 2*np.pi/3  and H-A separation < 2.5 A
+    """
+    
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+    
+    # all hbonds that ever occured in the traj
+    hbonds_all = np.empty((0,3))
+    framewise_hbonds = []
+    for f in frame_iterator:
+        hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        framewise_hbonds += [ hbonds ]
+        hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int) 
+    hbonds_all = np.unique(hbonds_all, axis=0)
+    
+    rOH = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+
+        posH = positions[f,hbonds_all[:,1]]
+        posA = utils.unwrap_points(positions[f,hbonds_all[:,2]], posH, Lx, Ly, Lz)
+
+        rOH += [ posH - posA ]
+
+    rOH = np.array(rOH)
+    
+    
+    #------------------------------------ Gyration eigenvectors ------------------------
+    
+    points = np.empty((0,3))
+    for p in backbone_positionss:
+        points = np.append(points, p, axis=0)
+    
+    center = np.mean(points, axis=0)
+
+    # Calculate gyration eigenvectors using only backbone atoms
+    
+    # Gij = 1/N SUM_n:1_N [ rn_i * rn_j ]
+    points -= center
+    G = np.zeros((3,3))
+    for i,j in itertools.product(range(3),range(3)):
+        G[i,j] = np.mean(points[:,i]*points[:,j])
+    
+
+    w,v = scipy.linalg.eig(G)
+
+    args = np.argsort(w)[::-1]
+
+    eigvec = v[:,args]
+
+    #------------------------------------ Calculate ------------------------
+
+
+    # Calculate spatial fluctuation, averaged over all frames
+    fluc_spatial = []
+    rOH_mean = np.mean(rOH, axis=1)
+    for i in range(rOH.shape[0]):
+        thetas = [ quaternion.angle_v1tov2(rOH_, rOH_mean[i]) for rOH_ in rOH[i] ]
+
+        fluc_spatial += [ np.sqrt(np.mean(np.array(thetas)**2)) ]
+
+    fluc_spatial = np.mean(fluc_spatial)
+    
+
+    # Calculate temporal fluctuation, averaged over all hbonds
+    fluc_temporal = []
+    rOH_mean = np.mean(rOH, axis=0)
+    for i in range(rOH.shape[1]):
+        thetas = [ quaternion.angle_v1tov2(rOH_, rOH_mean[i]) for rOH_ in rOH[:,i] ]
+
+        fluc_temporal += [ np.sqrt(np.mean(np.array(thetas)**2)) ]
+
+    fluc_temporal = np.mean(fluc_temporal)
+    
+    return fluc_spatial, fluc_temporal
+
 
 
 def Hbond_autocorrelation(grofile, trajfile, frame_iterator, window_duration, frame_interval, filename=None):
