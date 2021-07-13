@@ -35,9 +35,11 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
                 hbonds_ += [b]
         hbonds = np.array(hbonds_)
         
-        framewise_hbonds += [ hbonds ]
         if len(hbonds) ==0:
             hbonds = hbonds.reshape((0,3))
+            
+        framewise_hbonds += [ hbonds ]
+
         hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
         
     
