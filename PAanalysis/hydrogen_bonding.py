@@ -36,8 +36,9 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
         hbonds = np.array(hbonds_)
         
         framewise_hbonds += [ hbonds ]
-        if len(hbonds) !=0:
-            hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
+        if len(hbonds) ==0:
+            hbonds = hbonds.reshape((0,3))
+        hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
         
     
     hbonds_all = np.unique(hbonds_all, axis=0)
