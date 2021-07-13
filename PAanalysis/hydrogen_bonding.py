@@ -38,7 +38,8 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
         framewise_hbonds += [ hbonds ]
         hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
         
-    hbonds_all = np.unique(hbonds_all, axis=0)
+    if len(hbonds_all)!=0:
+        hbonds_all = np.unique(hbonds_all, axis=0)
     
     
 
@@ -86,7 +87,7 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
         theta += [ theta_ ]
 
     num_hbonds_perframe = num_hbonds/len(frame_iterator)
-
+    
     
     return (np.mean(r_DH),
             np.std(r_DH),
