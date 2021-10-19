@@ -444,8 +444,8 @@ def radius_of_gyration(itpfile, topfile, grofile, trrfile):
 
 
 def molecule_rmsd(itpfile, topfile, grofile, trrfile, box):
-    """Root Mean square displacement with respect to assembly centre
-    of the molecule's center of mass
+    """Root-Mean-Square displacement with respect to assembly centre
+    of the molecule's center of mass.
     """
 
     itpname = os.path.basename(itpfile).strip('.itp')
@@ -497,11 +497,11 @@ def res_rmsd_AUC(itpfile, topfile, grofile, trrfile, stride, box, delta_frames, 
     positions    = get_positions(grofile, trrfile, (start_index, num_atoms*nmol))
     num_frames = positions.shape[0]
     positions = positions.reshape(-1,nmol,num_atoms,3)
-
+    
     Lx = box['Lx']
     Ly = box['Ly']
     Lz = box['Lz']
-
+    
     # atom indices from itpfile
     pep_indices = []
     PAM_indices = []
@@ -601,7 +601,7 @@ def res_rmsd_AUC_freud(itpfile, topfile, grofile, trrfile, box, delta_frames):
     # calculate mean square displacement profile wrt time for each residue
     positions   -= [Lx/2,Ly/2,Lz/2]
     box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-
+    
     msd = freud.msd.MSD(box=box)
 
     rmsd = []

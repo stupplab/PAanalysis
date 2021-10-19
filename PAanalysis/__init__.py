@@ -10,6 +10,7 @@ from .hydration_profile import hydration_profile_atomistic
 from .res_res_separation import res_res_separation
 from .hydrogen_bonding import Hbonds
 from .hydrogen_bonding import Hbond_orientation
+from .hydrogen_bonding import Hbond_orientation2
 from .hydrogen_bonding import Hbond_autocorrelation
 from .hydrogen_bonding import SASA
 from .vibrational_spectra import vibrational_spectra
@@ -22,4 +23,4 @@ from .vibrational_spectra import r_C_C
 from .RMSF import RMSF
 from .RMSF import inter_atom_fluctuation
 from .RMSF import PA_rotation
-from .curvature import curvature
+from .curvature import C16_C_eigs

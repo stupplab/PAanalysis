@@ -117,6 +117,60 @@ def Hbond_chirality():
     """
 
 
+def Hbond_orientation2(grofile, trajfile, frame_iterator):
+    """
+    NOTE: For atomistic simulations
+    Calculates baker-hubbard hydrogen bond for frame_iterator
+    
+    Calculates the fluctuation of the direction O-H bond as 
+    theta is angle between the OH orientation and it's average.
+    """
+    import freud 
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+
+    # Calculation
+    costhetas = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+        hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        rOH = positions[f,hbonds[:,1]] - positions[f,hbonds[:,2]]
+        rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
+
+        # Calculate fluctuation of rOH wrt to its mean
+        rOH_mean = np.mean(rOH, axis=0)
+        rOH_mean /= np.linalg.norm(rOH_mean)
+
+        costhetas = np.append(costhetas, rOH.dot(rOH_mean.reshape(-1,1)).reshape(-1))
+        
+
+    return np.mean(np.abs(costhetas)), np.mean(costhetas)
+
+
+
 
 def Hbond_orientation(grofile, trajfile, frame_iterator, eig_index):
     """
@@ -191,7 +245,6 @@ def Hbond_orientation(grofile, trajfile, frame_iterator, eig_index):
     eigvec = v[:,args]
 
     #------------------------------------ Calculate ------------------------
-
 
     # Calculate spatial fluctuation, averaged over all frames
     fluc_spatial = []
