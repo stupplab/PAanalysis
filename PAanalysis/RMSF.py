@@ -12,6 +12,7 @@ import itertools
     
 def RMSF(grofile, trajfile, frame_iterator):
     """
+    NOT COMPLETED
     atomistic simulation
     Root mean square fluctuation of the peptide backbone
     displacement wrt mean configuration
@@ -25,7 +26,6 @@ def RMSF(grofile, trajfile, frame_iterator):
     num_frames = traj.n_frames
     
     #------------------------------------ Backbone args ------------------------
-    
     backbone_args = []
     not_water_args = []
     for atom in traj.top.atoms:
@@ -38,11 +38,15 @@ def RMSF(grofile, trajfile, frame_iterator):
     not_water_args = np.array(not_water_args)
     
     args = not_water_args
+    #------------------------------------------------------------------------
+
     #------------------------------------ Box Images ------------------------
     # Identify images if particles jump more than half the box length
     
     unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
     images = utils.find_box_images(positions[:,args], unitcell_lengths)
+
+    #------------------------------------------------------------------------
 
     #--------------------- Make orientational and translation invarient -------------------
     
@@ -55,13 +59,30 @@ def RMSF(grofile, trajfile, frame_iterator):
         points_f -= [Lx/2, Ly/2, Lz/2]
         points_f = box.unwrap(points_f, images[f])
         points_f -= np.mean(points_f, axis=0)
-        _,eigvec = utils.gyration(points_f)
+        
+        w,eigvec = utils.gyration(points_f)
+        w = np.abs(w)
+        wargs = np.argsort(w)[::-1]
+        w = w[wargs]
+        eigvec = eigvec[:,wargs]
+        
         for i,v in enumerate([[1,0,0],[0,1,0],[0,0,1]]):
             q = quaternion.q_between_vectors(eigvec[:,i], v)
             for j,p in enumerate(points_f):
                 points_f[j] = quaternion.qv_mult(q,p)
+            # also rotate rest of the eigenvectors
+            for j in range(i+1,3):
+                eigvec[:,j] = quaternion.qv_mult(q,eigvec[:,j])            
 
         points += [ points_f ]
+        
+        # w,eigvec = utils.gyration(points_f)
+        # w = np.real(w)
+        # wargs = np.argsort(w)[::-1]
+        # w = w[wargs]
+        # eigvec = eigvec[:,wargs]
+        # print(eigvec)
+    
     points = np.array(points)
     
     points_mean = np.mean(points, axis=0, keepdims=True)

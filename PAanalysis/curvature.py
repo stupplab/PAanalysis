@@ -57,7 +57,7 @@ def C16_C_eigs(grofile, trajfile, frame_iterator):
         points_f = box.unwrap(points_f, images[f])
         points_f -= np.mean(points_f, axis=0)
         w,eigvec = utils.gyration(points_f)
-        w = np.real(w)
+        w = np.abs(w)
         wargs = np.argsort(w)[::-1]
         w = w[wargs]
         eigvec = eigvec[:,wargs]
