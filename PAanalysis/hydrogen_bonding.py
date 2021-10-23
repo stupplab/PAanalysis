@@ -157,6 +157,8 @@ def Hbond_orientation2(grofile, trajfile, frame_iterator):
             if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
                 hbonds_ += [b]
         hbonds = np.array(hbonds_)
+        if len(hbonds) == 0:
+            continue
         rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
         rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
 
