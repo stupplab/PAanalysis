@@ -157,7 +157,7 @@ def Hbond_orientation2(grofile, trajfile, frame_iterator):
             if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
                 hbonds_ += [b]
         hbonds = np.array(hbonds_)
-        rOH = positions[f,hbonds[:,1]] - positions[f,hbonds[:,2]]
+        rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
         rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
 
         # Calculate fluctuation of rOH wrt to its mean
