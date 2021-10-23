@@ -196,10 +196,10 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
     """Calculates avearge distance between O (C=O) and H (NH) and H (HOH)
     r_CO_HN
     r_CO_HOH
-    
+
     r is calculated af the average distance of O (C=O) from the nearest H (NH / HOH)
     """
-    
+
     #---------------------------------------------------------------------------------
 
     traj = mdtraj.load(trajfile, top=grofile)
@@ -311,6 +311,9 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
 
     r_CO_NH_mean = np.mean(r_CO_NH)
     r_CO_HOH_mean = np.mean(r_CO_HOH)
+
+
+    return r_CO_NH_mean, r_CO_HOH_mean
 
     #---------------------------------------------------------------------------------
 
