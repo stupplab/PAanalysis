@@ -117,6 +117,401 @@ def Hbond_chirality():
     """
 
 
+def CO_orientation_order(grofile, trajfile, frame_iterator):
+    """
+    NOTE: For atomistic simulations
+    
+    Calculates the orientation order of the C=O of amide bond wrt to the mean direction
+    using http://gisaxs.com/index.php/Orientation_order_parameter
+    S = ( 3* <cos^2(theta)> - 1 ) / 2
+    theta is angle between the OH orientation and the mean director.
+    The first 4 C=O bonds are used
+    num_CO: number of CO bonds per PA starting from the alkyl-peptide interface
+
+    Calculates S for all C=Os
+    """
+    
+    import freud 
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+
+    # identify the args for C=O bonds using mdtraj
+    CO_indices = np.empty((0,2), dtype=int)
+
+    for i, res in enumerate(traj.top.residues):
+        id_ = np.array([[None, None]])
+        if res.is_protein:
+            for atom in res.atoms:
+                if atom.is_backbone:
+                    if atom.name == 'C':
+                        id_[0,0] = atom.index
+                    elif atom.name == 'O':
+                        id_[0,1] = atom.index
+            CO_indices = np.append(CO_indices, id_, axis=0)
+
+    CO_indices = CO_indices.astype(int)
+
+    # Calculation
+    costhetas = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+
+        rCO = positions_f[CO_indices[:,1]] - positions_f[CO_indices[:,0]]
+        rCO /= np.linalg.norm(rCO, axis=1, keepdims=True)
+
+        # Calculate projection costheta of rOH wrt to its mean
+        rCO_mean = np.mean(rCO, axis=0)
+        rCO_mean /= np.linalg.norm(rCO_mean)
+
+        costhetas = np.append(costhetas, rCO.dot(rCO_mean.reshape(-1,1)).reshape(-1))
+        
+    S = ( 3 * np.mean(costhetas**2) - 1 ) /2
+
+    return S
+
+
+def CO_degree_of_alignment(grofile, trajfile, frame_iterator):
+    """
+    NOTE: For atomistic simulations
+    
+    Calculates the asphericity using the eigenvalues of the gyration tensor
+    formed by the CO vectors
+    """
+    
+    import freud 
+    import scipy
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+
+    # identify the args for C=O bonds using mdtraj
+    CO_indices = np.empty((0,2), dtype=int)
+
+    for i, res in enumerate(traj.top.residues):
+        id_ = np.array([[None, None]])
+        if res.is_protein:
+            for atom in res.atoms:
+                if atom.is_backbone:
+                    if atom.name == 'C':
+                        id_[0,0] = atom.index
+                    elif atom.name == 'O':
+                        id_[0,1] = atom.index
+            CO_indices = np.append(CO_indices, id_, axis=0)
+
+    CO_indices = CO_indices.astype(int)
+
+    # Calculation
+    L1 = []
+    L2 = []
+    L3 = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+
+        rCO = positions_f[CO_indices[:,1]] - positions_f[CO_indices[:,0]]
+        rCO /= np.linalg.norm(rCO, axis=1, keepdims=True)
+
+        # Calculate eigenvalues
+        cl_props = freud.cluster.ClusterProperties()
+        cl_props.compute((box, rCO), np.zeros(len(rCO)))
+        G = cl_props.gyrations[0]
+        L3_, L2_, L1_ = np.sort(scipy.linalg.eigvalsh(G))
+        L1 += [L1_]
+        L2 += [L2_]
+        L3 += [L3_]
+        
+    L1 = np.array(L1)
+    L2 = np.array(L2)
+    L3 = np.array(L3)
+
+    asphericity = np.mean( L1 - ( L2 + L3 ) / 2 )
+
+    return asphericity
+
+
+def CO_nematic_order(grofile, trajfile, frame_iterator):
+    """
+    NOTE: For atomistic simulations
+    
+    Calculates the nematic order using freud
+    formed by the CO vectors
+    """
+    
+    import freud
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+
+    # identify the args for C=O bonds using mdtraj
+    CO_indices = np.empty((0,2), dtype=int)
+
+    for i, res in enumerate(traj.top.residues):
+        id_ = np.array([[None, None]])
+        if res.is_protein:
+            for atom in res.atoms:
+                if atom.is_backbone:
+                    if atom.name == 'C':
+                        id_[0,0] = atom.index
+                    elif atom.name == 'O':
+                        id_[0,1] = atom.index
+            CO_indices = np.append(CO_indices, id_, axis=0)
+
+    CO_indices = CO_indices.astype(int)
+
+    # Calculation
+    S = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+        rCO = positions_f[CO_indices[:,1]] - positions_f[CO_indices[:,0]]
+        rCO /= np.linalg.norm(rCO, axis=1, keepdims=True)
+
+        # Calculate nematic order
+        director = np.array([1,0,0])
+        orientations = [quaternion.q_between_vectors(director, v2) for v2 in rCO]
+        nematic = freud.order.Nematic(director)
+        nematic.compute(orientations)
+        S += [nematic.order]
+        
+    return np.mean(S)
+
+
+
+def Hbond_nematic_order(grofile, trajfile, frame_iterator):
+    """
+    NOTE: For atomistic simulations
+    Calculates baker-hubbard hydrogen bond for frame_iterator
+    
+    Calculates the nematic order using freud
+    """
+    
+    import freud 
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+
+    # Calculation
+    S = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+        hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        if len(hbonds) == 0:
+            continue
+        rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
+        rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
+
+        # Calculate nematic order
+        director = np.array([1,0,0])
+        orientations = [quaternion.q_between_vectors(director, v2) for v2 in rOH]
+        nematic = freud.order.Nematic(director)
+        nematic.compute(orientations)
+        S += [nematic.order]
+        
+    return np.mean(S)
+
+
+
+def Hbond_degree_of_alignment(grofile, trajfile, frame_iterator):
+    """
+    NOTE: For atomistic simulations
+    Calculates baker-hubbard hydrogen bond for frame_iterator
+    
+    Calculates the asphericity using the eigenvalues of the gyration tensor
+    formed by the Hbond vectors
+    
+    """
+    
+    import freud 
+    import scipy
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+
+    # Calculation
+    L1 = []
+    L2 = []
+    L3 = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+        hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        if len(hbonds) == 0:
+            continue
+        
+        rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
+        rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
+
+        # Calculate eigenvalues
+        cl_props = freud.cluster.ClusterProperties()
+        cl_props.compute((box, rOH), np.zeros(len(rOH)))
+        G = cl_props.gyrations[0]
+        L3_, L2_, L1_ = np.sort(scipy.linalg.eigvalsh(G))
+        L1 += [L1_]
+        L2 += [L2_]
+        L3 += [L3_]
+        
+    L1 = np.array(L1)
+    L2 = np.array(L2)
+    L3 = np.array(L3)
+
+    asphericity = np.mean( L1 - ( L2 + L3 ) / 2 )
+
+    return asphericity
+
+
+
+
+def Hbond_orientation_order(grofile, trajfile, frame_iterator):
+    """
+    NOTE: For atomistic simulations
+    Calculates baker-hubbard hydrogen bond for frame_iterator
+    
+    Calculates the orientation order of the H-Bonds wrt to the mean direction
+    using http://gisaxs.com/index.php/Orientation_order_parameter
+    S = ( 3* <cos^2(theta)> - 1 ) / 2
+    theta is angle between the OH orientation and the mean director.
+    """
+    
+    import freud 
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+
+    # Calculation
+    costhetas = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+        hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        if len(hbonds) == 0:
+            continue
+        rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
+        rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
+
+        # Calculate projection costheta of rOH wrt to its mean
+        rOH_mean = np.mean(rOH, axis=0)
+        rOH_mean /= np.linalg.norm(rOH_mean)
+
+        costhetas = np.append(costhetas, rOH.dot(rOH_mean.reshape(-1,1)).reshape(-1))
+        
+    S = ( 3 * np.mean(costhetas**2) - 1 ) /2
+
+    return S
+
+
+
+
 def Hbond_orientation2(grofile, trajfile, frame_iterator):
     """
     NOTE: For atomistic simulations

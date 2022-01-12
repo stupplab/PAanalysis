@@ -11,6 +11,12 @@ from .res_res_separation import res_res_separation
 from .hydrogen_bonding import Hbonds
 from .hydrogen_bonding import Hbond_orientation
 from .hydrogen_bonding import Hbond_orientation2
+from .hydrogen_bonding import CO_orientation_order
+from .hydrogen_bonding import Hbond_orientation_order
+from .hydrogen_bonding import Hbond_degree_of_alignment
+from .hydrogen_bonding import Hbond_nematic_order
+from .hydrogen_bonding import CO_degree_of_alignment
+from .hydrogen_bonding import CO_nematic_order
 from .hydrogen_bonding import Hbond_autocorrelation
 from .hydrogen_bonding import SASA
 from .vibrational_spectra import vibrational_spectra
