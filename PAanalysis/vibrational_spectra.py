@@ -222,7 +222,8 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
     O_indices = []
     N_indices = []
     H_indices = []
-    molids = np.empty(0, dtype=int)
+    molids_O = np.empty(0, dtype=int)
+    molids_H = np.empty(0, dtype=int)
     with open(grofile, 'r') as f:
         lines = f.readlines()
     for i,line in enumerate(lines):
@@ -232,19 +233,19 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
     for i,line in enumerate(lines):
         if ' C ' in line:
             C_indices += [i-line_start]
-            molids = np.append(molids, int( i // num_atoms_permol ) )
         elif ' O ' in line:
             O_indices += [i-line_start]
+            molids_O = np.append(molids_O, int( i // num_atoms_permol ) )
         elif ' N ' in line:
             N_indices += [i-line_start]
         elif ' HN ' in line:
             H_indices += [i-line_start]
+            molids_H = np.append(molids_H, int( i // num_atoms_permol ) )
     indices = dict( 
         C = np.array(C_indices), 
         O = np.array(O_indices),
         N = np.array(N_indices),
         H = np.array(H_indices) )
-    
     
     
     # Get water indices using mdtraj
@@ -279,7 +280,7 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
         pairs_ = []
         n=-1
         for pair in neighbor_pairs:
-            if molids[ pair[0] ] == molids[ pair[1] ]:
+            if molids_O[ pair[0] ] == molids_H[ pair[1] ]:
                 continue
             if n < pair[0]:
                 pairs_ += [pair]
