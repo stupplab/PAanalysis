@@ -12,7 +12,6 @@ import itertools
     
 def RMSF(grofile, trajfile, frame_iterator):
     """
-    NOT COMPLETED
     atomistic simulation
     Root mean square fluctuation of the peptide backbone
     displacement wrt mean configuration
@@ -95,6 +94,96 @@ def RMSF(grofile, trajfile, frame_iterator):
 
     return rmsf
 
+
+
+def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames):
+    """
+    atomistic simulation
+    Root mean square fluctuation of the peptide backbone
+    displacement wrt mean configuration
+
+    residuenames: atom names as given in the coPA_water.gro file
+    """
+    
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+    
+    num_frames = traj.n_frames
+    
+    #------------------------------------ Non-water atoms ------------------------
+    backbone_args = []
+    not_water_args = []
+    specific_args = []
+    for atom in traj.top.atoms:
+        if atom.residue.name in ['C16', '12C', 'HOH', 'NA', 'CL', 'ION']:
+            continue
+        if atom.name in ['C', 'N', 'CA']:
+            backbone_args += [atom.index]
+        not_water_args += [atom.index]
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
+            specific_args += [atom.index]
+    backbone_args = np.array(backbone_args)
+    not_water_args = np.array(not_water_args)
+    
+
+    args = specific_args
+    #------------------------------------------------------------------------
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions[:,args], unitcell_lengths)
+    #------------------------------------------------------------------------
+    
+    points = positions[frame_iterator][:,args]
+
+    #-------------------------- Unwrap and centralize -----------------------
+    for n,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+        points_f = points[n]
+        points_f -= [Lx/2, Ly/2, Lz/2]
+        points_f = box.unwrap(points_f, images[f])
+        points_f -= np.mean(points_f, axis=0)
+        points[n] = points_f
+
+    #------------------------------------------------------------------------
+
+    #---------------------- Make orientational invariant --------------------
+    for n,f in enumerate(frame_iterator):
+        points_f = np.copy(points[n])
+        
+        # gyration vectors
+        w,eigvec = utils.gyration(points_f)
+        w = np.abs(w)
+        wargs = np.argsort(w)[::-1]
+        w = w[wargs]
+        eigvec = eigvec[:,wargs]
+        if n!=0: # flip eigvec near to eigvec_prev
+            dotproducts = np.sum( eigvec * eigvec_prev, axis=0, keepdims=True )
+            eigvec *= np.sign(dotproducts)
+        eigvec_prev = np.copy(eigvec)
+
+        # rotate system towards cartesian
+        v = eigvec[:,0]
+        qx = quaternion.q_between_vectors( v, [1,0,0] )
+        v = quaternion.qv_mult( qx, eigvec[:,1] )
+        qy = quaternion.q_between_vectors( v, [0,1,0] )
+        q = quaternion.qq_mult( qy, qx )
+        v = quaternion.qv_mult( q, eigvec[:,2] )
+        qz = quaternion.q_between_vectors( v, [0,0,1] )
+        q = quaternion.qq_mult( qz, q )
+        points_f = [ quaternion.qv_mult(q,p) for p in points_f]
+        
+        points[n] = points_f
+    #------------------------------------------------------------------------
+
+    # Calculate RMSF
+    points_mean = np.mean(points, axis=0, keepdims=True)
+    rmsf = np.sqrt(np.mean((points - points_mean)**2))
+
+    return rmsf
 
 
 

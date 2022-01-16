@@ -5,8 +5,7 @@ from . import quaternion
 
 from .gyration_moments import gyration_moments
 from .residence_time import residence_time
-from .hydration_profile import hydration_profile
-from .hydration_profile import hydration_profile_atomistic
+from .hydration_profile import *
 from .res_res_separation import res_res_separation
 from .hydrogen_bonding import Hbonds
 from .hydrogen_bonding import Hbond_orientation
@@ -26,7 +25,7 @@ from .vibrational_spectra import CO_bond_length_properties
 from .vibrational_spectra import electrostatic_potential
 from .vibrational_spectra import r_O_H
 from .vibrational_spectra import r_C_C
-from .RMSF import RMSF
+from .RMSF import RMSF, RMSF_specific_residues
 from .RMSF import inter_atom_fluctuation
 from .RMSF import PA_rotation
 from .curvature import C16_C_eigs
