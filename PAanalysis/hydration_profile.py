@@ -109,7 +109,7 @@ def hydration_profile(itpfiles, topfile, grofile, trajfile, radius, frame_iterat
             query_points -= [Lx/2,Ly/2,Lz/2]
             neighborhood = freud.locality.LinkCell(box, points_W, cell_width=radius)
             neighbor_pairs = neighborhood.query(query_points, query_args).toNeighborList()
-            num_water += [ len(neighbor_pairs) / nmol ]
+            num_water += [ len(neighbor_pairs) / len(query_points) ]
             global_water_density += [nmol_W / (Lx*Ly*Lz)]
         
         hydration += [ np.mean((np.array(num_water)/(4/3*np.pi*radius**3)) / np.array(global_water_density)) ]
