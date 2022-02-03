@@ -13,10 +13,9 @@ import time
 
 
 
-def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None, filenameft=None):
+def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None, filenamerdf=None, filenameft=None):
     """Calculates avearge distance between O (C=O) and H (NH) and H (HOH)
-    r_CO_HN
-    r_CO_HOH
+    r_CO_CO
 
     r is calculated af the average distance of O (C=O) from the nearest H (NH / HOH)
     """
@@ -33,7 +32,6 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
 
     num_atoms_permol = utils.get_num_atoms_fromtop(topfile, molname)
 
-
     radius = 2 # rvdw and rcoulomb
 
     #---------------------------------------------------------------------------------
@@ -43,7 +41,7 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
     O_indices = []
     N_indices = []
     H_indices = []
-    molids = np.empty(0, dtype=int)
+    molids_C = np.empty(0, dtype=int)
     with open(grofile, 'r') as f:
         lines = f.readlines()
     for i,line in enumerate(lines):
@@ -53,7 +51,7 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
     for i,line in enumerate(lines):
         if ' C ' in line:
             C_indices += [i-line_start]
-            molids = np.append(molids, int( i // num_atoms_permol ) )
+            molids_C = np.append(molids_C, int( i // num_atoms_permol ) )
         elif ' O ' in line:
             O_indices += [i-line_start]
         elif ' N ' in line:
@@ -67,7 +65,17 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
         H = np.array(H_indices) )
     
     
+    residue_indices = []
+    for atom in traj.top.atoms:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+            residue_indices += [atom.index]
     
+    if type(residuename) != type(None):
+        args = list(set(residue_indices) & set(indices['C']))
+    else:
+        args = indices['C']
+    
+
     # Get water indices using mdtraj
     HOH_indices = []
     for residue in traj.top.residues:
@@ -75,6 +83,44 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
             HOH_indices += [residue.atom('O').index, residue.atom('O').index+1, residue.atom('O').index+2]
     indices['HOH'] = np.array(HOH_indices)
 
+    #---------------------------------------------------------------------------------
+
+    query_args = {}
+    query_args['C'] = dict(mode='nearest', num_neighbors=8, r_max=radius, exclude_ii=True)
+
+    r_C_C = np.empty(0)
+
+    for frame in frame_iterator:
+        Lx, Ly, Lz = traj.unitcell_lengths[frame]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+        
+        points = positions[frame, args]
+        neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
+
+        query_points = positions[frame, args]
+        neighbor_pairs = np.array(neighborhood.query(query_points, query_args['C']).toNeighborList()[:])
+        
+        # Exclude neighbor pairs that are in the same mol and choose the nearest one
+        pairs_ = []
+        n=-1
+        for pair in neighbor_pairs:
+            if molids_C[ pair[0] ] == molids_C[ pair[1] ]:
+                continue
+            if n < pair[0]:
+                pairs_ += [pair]
+                n = pair[0]
+        neighbor_pairs = np.array(pairs_)
+        
+        unwrapped_points = utils.unwrap_points(points[neighbor_pairs[:,1]], query_points[neighbor_pairs[:,0]], Lx, Ly, Lz)
+        r = unwrapped_points - query_points[neighbor_pairs[:,0]]
+        r_norm = np.linalg.norm(r, axis=-1)
+
+        r_C_C = np.append(r_C_C, r_norm, axis=0)
+
+    r_C_C_mean = np.mean(r_C_C)
+
+
+    return r_C_C_mean
 
     #---------------------------------------------------------------------------------
 
@@ -192,7 +238,7 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
 
 
 
-def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None, filenameft=None):
+def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None, filenamerdf=None, filenameft=None):
     """Calculates avearge distance between O (C=O) and H (NH) and H (HOH)
     r_CO_HN
     r_CO_HOH
@@ -248,6 +294,18 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
         H = np.array(H_indices) )
     
     
+    residue_indices = []
+    for atom in traj.top.atoms:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+            residue_indices += [atom.index]
+    
+    if type(residuename) != type(None):
+        indices['C'] = list(set(residue_indices) & set(indices['C']))
+        indices['H'] = list(set(residue_indices) & set(indices['H']))
+        indices['O'] = list(set(residue_indices) & set(indices['O']))
+        indices['H'] = list(set(residue_indices) & set(indices['H']))
+
+
     # Get water indices using mdtraj
     HOH_indices = []
     for residue in traj.top.residues:
@@ -286,7 +344,6 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, filenamerdf=None,
                 pairs_ += [pair]
                 n = pair[0]
         neighbor_pairs = np.array(pairs_)
-
         
         unwrapped_points = utils.unwrap_points(points[neighbor_pairs[:,1]], query_points[neighbor_pairs[:,0]], Lx, Ly, Lz)
         r = unwrapped_points - query_points[neighbor_pairs[:,0]]
@@ -1506,6 +1563,5 @@ def vibrational_spectra(grofile, trajfile, topfile, molname, frame_iterator, rtp
     
 
     return w_peak1, w_peak2
-
 
 

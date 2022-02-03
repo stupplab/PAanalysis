@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 
-def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
+def Hbonds(grofile, trajfile, frame_iterator, residuename=None, freq=0.1):
     """
     NOTE: For atomistic simulations
     Calculates baker-hubbard hydrogen bond for frame_iterator
@@ -46,7 +46,11 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
     hbonds_all = np.unique(hbonds_all, axis=0)
     
     
-
+    
+    residue_indices = []
+    for atom in traj.top.atoms:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+            residue_indices += [atom.index]
     
     num_hbonds_all = len(hbonds_all)
 
@@ -63,6 +67,13 @@ def Hbonds(grofile, trajfile, frame_iterator, freq=0.1):
     for i,f in enumerate(frame_iterator):
         Lx, Ly, Lz = traj.unitcell_lengths[f]
         hbonds = framewise_hbonds[i]
+        if type(residuename) != type(None):
+            hbonds_hash = {}
+            for hb in hbonds:
+                hbonds_hash[hb[0]] = hb
+            args = list(set(residue_indices) & set(hbonds[:,0]))
+            hbonds = np.array([hbonds_hash[arg] for arg in args])
+            
         if len(hbonds)==0:
             continue
         num_hbonds += len(hbonds)
@@ -261,7 +272,7 @@ def CO_degree_of_alignment(grofile, trajfile, frame_iterator):
     return asphericity
 
 
-def CO_nematic_order(grofile, trajfile, frame_iterator):
+def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
     """
     NOTE: For atomistic simulations
     
@@ -285,6 +296,11 @@ def CO_nematic_order(grofile, trajfile, frame_iterator):
 
     #------------------------------------------------------------------------
 
+    residue_indices = []
+    for atom in traj.top.atoms:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+            residue_indices += [atom.index]
+
 
     # identify the args for C=O bonds using mdtraj
     CO_indices = np.empty((0,2), dtype=int)
@@ -301,6 +317,14 @@ def CO_nematic_order(grofile, trajfile, frame_iterator):
             CO_indices = np.append(CO_indices, id_, axis=0)
 
     CO_indices = CO_indices.astype(int)
+
+    if type(residuename) != type(None):
+        CO_hash = {}
+        for id_ in CO_indices:
+            CO_hash[id_[0]] = id_
+        indices = list(set(residue_indices) & set(CO_indices[:,0]))
+        CO_indices = np.array([CO_hash[id_] for id_ in indices], dtype=int)
+
 
     # Calculation
     S = []
@@ -324,7 +348,7 @@ def CO_nematic_order(grofile, trajfile, frame_iterator):
 
 
 
-def Hbond_nematic_order(grofile, trajfile, frame_iterator):
+def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
     """
     NOTE: For atomistic simulations
     Calculates baker-hubbard hydrogen bond for frame_iterator
@@ -348,6 +372,11 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator):
 
     #------------------------------------------------------------------------
 
+    residue_indices = []
+    for atom in traj.top.atoms:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+            residue_indices += [atom.index]
+
 
     # Calculation
     S = []
@@ -364,6 +393,13 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator):
             if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
                 hbonds_ += [b]
         hbonds = np.array(hbonds_)
+        if type(residuename) != type(None):
+            hbonds_hash = {}
+            for hb in hbonds:
+                hbonds_hash[hb[0]] = hb
+            args = list(set(residue_indices) & set(hbonds[:,0]))
+            hbonds = np.array([hbonds_hash[arg] for arg in args])
+        
         if len(hbonds) == 0:
             continue
         rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
