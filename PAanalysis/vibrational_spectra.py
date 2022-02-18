@@ -304,8 +304,7 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
         indices['H'] = list(set(residue_indices) & set(indices['H']))
         indices['O'] = list(set(residue_indices) & set(indices['O']))
         indices['H'] = list(set(residue_indices) & set(indices['H']))
-
-
+        
     # Get water indices using mdtraj
     HOH_indices = []
     for residue in traj.top.residues:
@@ -326,8 +325,10 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
     for frame in frame_iterator:
         Lx, Ly, Lz = traj.unitcell_lengths[frame]
         box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
-        
+
         points = positions[frame, indices['H']]
+        if len(points) == 0:
+            continue
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
         query_points = positions[frame, indices['O']]
@@ -344,7 +345,7 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
                 pairs_ += [pair]
                 n = pair[0]
         neighbor_pairs = np.array(pairs_)
-        
+
         unwrapped_points = utils.unwrap_points(points[neighbor_pairs[:,1]], query_points[neighbor_pairs[:,0]], Lx, Ly, Lz)
         r = unwrapped_points - query_points[neighbor_pairs[:,0]]
         r_norm = np.linalg.norm(r, axis=-1)
@@ -366,10 +367,14 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
         r_CO_HOH = np.append(r_CO_HOH, r_norm, axis=0)
 
 
-
-    r_CO_NH_mean = np.mean(r_CO_NH)
-    r_CO_HOH_mean = np.mean(r_CO_HOH)
-
+    if len(r_CO_NH)!=0:
+        r_CO_NH_mean = np.mean(r_CO_NH)
+    else:
+        r_CO_NH_mean = 0
+    if len(r_CO_HOH)!=0:
+        r_CO_HOH_mean = np.mean(r_CO_HOH)
+    else:
+        r_CO_HOH_mean = 0
 
     return r_CO_NH_mean, r_CO_HOH_mean
 
