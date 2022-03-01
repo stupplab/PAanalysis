@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 
-def Hbonds(grofile, trajfile, frame_iterator, residuename=None, freq=0.1):
+def Hbonds(grofile, trajfile, frame_iterator, residuenames=None, freq=0.1):
     """
     NOTE: For atomistic simulations
     Calculates baker-hubbard hydrogen bond for frame_iterator
@@ -49,7 +49,7 @@ def Hbonds(grofile, trajfile, frame_iterator, residuename=None, freq=0.1):
     
     residue_indices = []
     for atom in traj.top.atoms:
-        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
             residue_indices += [atom.index]
     
     num_hbonds_all = len(hbonds_all)
@@ -67,7 +67,7 @@ def Hbonds(grofile, trajfile, frame_iterator, residuename=None, freq=0.1):
     for i,f in enumerate(frame_iterator):
         Lx, Ly, Lz = traj.unitcell_lengths[f]
         hbonds = framewise_hbonds[i]
-        if type(residuename) != type(None):
+        if type(residuenames) != type(None):
             hbonds_hash = {}
             for hb in hbonds:
                 hbonds_hash[hb[0]] = hb
