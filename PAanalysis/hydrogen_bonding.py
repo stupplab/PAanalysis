@@ -46,11 +46,11 @@ def Hbonds(grofile, trajfile, frame_iterator, residuenames=None, freq=0.1):
     hbonds_all = np.unique(hbonds_all, axis=0)
     
     
-    
-    residue_indices = []
-    for atom in traj.top.atoms:
-        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
-            residue_indices += [atom.index]
+    if type(residuenames) != type(None):
+        residue_indices = []
+        for atom in traj.top.atoms:
+            if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
+                residue_indices += [atom.index]
     
     num_hbonds_all = len(hbonds_all)
 
