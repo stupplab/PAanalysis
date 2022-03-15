@@ -258,14 +258,14 @@ def local_RMSF(grofile, trajfile, frame_iterator, residuenames=None, fraction_of
 
     #--------------- select points clusters from the 1st frame ---------------
     
-    radius = 0.8
+    radius = 0.4
     frame = 0
     Lx, Ly, Lz = traj.unitcell_lengths[frame_iterator[frame]]
     box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
     neighborhood = freud.locality.LinkCell(
         box, points[frame], cell_width=radius)
     query_args = dict(
-        mode='nearest', num_neighbors=16, r_max=radius, exclude_ii=False)
+        mode='nearest', num_neighbors=12, r_max=radius, exclude_ii=False)
     query_points = points[frame]
     
     if type(fraction_of_points) != type(None):
