@@ -221,7 +221,7 @@ def local_RMSF(grofile, trajfile, frame_iterator, residuenames=None, fraction_of
     backbone_args = np.array(backbone_args)
     not_water_args = np.array(not_water_args)
     
-    args = not_water_args
+    args = backbone_args
     #-----------------------------------------------------------------------------
 
     #------------------------------ Filter for residuenames ----------------------
