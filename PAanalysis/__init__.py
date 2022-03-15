@@ -25,7 +25,8 @@ from .vibrational_spectra import CO_bond_length_properties
 from .vibrational_spectra import electrostatic_potential
 from .vibrational_spectra import r_O_H
 from .vibrational_spectra import r_C_C
-from .RMSF import RMSF, RMSF_specific_residues
+from .RMSF import RMSF, RMSF_specific_residues, local_RMSF
 from .RMSF import inter_atom_fluctuation
 from .RMSF import PA_rotation
+
 from .curvature import C16_C_eigs
