@@ -98,7 +98,10 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
         query_points = positions[frame, args]
-        neighbor_pairs = np.array(neighborhood.query(query_points, query_args['C']).toNeighborList()[:])
+        neighbor_pairs = np.array(
+            neighborhood.query(
+                query_points, query_args['C']).toNeighborList(
+                sort_by_distance=True)[:])
         
         # Exclude neighbor pairs that are in the same mol and choose the nearest one
         pairs_ = []
@@ -332,7 +335,10 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
         query_points = positions[frame, indices['O']]
-        neighbor_pairs = np.array(neighborhood.query(query_points, query_args['NH']).toNeighborList()[:])
+        neighbor_pairs = np.array(
+            neighborhood.query(
+                query_points, query_args['NH']).toNeighborList(
+                sort_by_distance=True)[:])
 
         
         # Exclude neighbor pairs that are in the same mol
@@ -358,7 +364,10 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
         query_points = positions[frame, indices['O']]
-        neighbor_pairs = np.array(neighborhood.query(query_points, query_args['HOH']).toNeighborList()[:])
+        neighbor_pairs = np.array(
+            neighborhood.query(
+                query_points, query_args['HOH']).toNeighborList(
+                sort_by_distance=True)[:])
 
         unwrapped_points = utils.unwrap_points(points[neighbor_pairs[:,1]], query_points[neighbor_pairs[:,0]], Lx, Ly, Lz)
         r = unwrapped_points - query_points[neighbor_pairs[:,0]]

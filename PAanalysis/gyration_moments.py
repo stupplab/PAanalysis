@@ -75,11 +75,10 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator, resid
             residue_indices += [range(num_atomss[i])]
 
 
-
     L1 = []
     L2 = []
     L3 = []
-    maxcluster_sizes = []
+    maxcluster_sizes_fraction = []
     
     # query_args = dict(mode='nearest', num_neighbors=1, r_max=radius, exclude_ii=True)
     for frame in frame_iterator:
@@ -93,7 +92,7 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator, resid
             points = np.append(points,positions_, axis=0)
         
         points -= [Lx/2,Ly/2,Lz/2]
-
+        
         # cluster
         cl = freud.cluster.Cluster()
         cl.compute((box, points), neighbors={'r_max': 0.8})
@@ -111,15 +110,15 @@ def gyration_moments(itpfiles, topfile, grofile, trajfile, frame_iterator, resid
         L1 += [L1_]
         L2 += [L2_]
         L3 += [L3_]
-        maxcluster_sizes += [sizes[argmax]]
+        maxcluster_sizes_fraction += [ sizes[argmax] / len(points) ]
         
 
     L1_avg = np.mean(L1)
     L2_avg = np.mean(L2)
     L3_avg = np.mean(L3)
     
-    maxcluster_size = np.mean(maxcluster_sizes) # number of residues in max cluster
+    maxcluster_size_fraction = np.mean(maxcluster_sizes_fraction) # number of residues in max cluster
 
-    return maxcluster_size, L1_avg, L2_avg, L3_avg
+    return maxcluster_size_fraction, L1_avg, L2_avg, L3_avg
 
 
