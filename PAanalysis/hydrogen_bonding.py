@@ -414,6 +414,107 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
     return np.mean(S)
 
 
+def local_Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
+    """
+    NOTE: For atomistic simulations
+    Calculates baker-hubbard hydrogen bond for frame_iterator
+        
+    Calculates the nematic order using freud
+    """
+    
+    import freud 
+
+    traj = mdtraj.load(trajfile, top=grofile)
+    
+    positions = traj.xyz
+
+    num_frames = traj.n_frames
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+    #------------------------------ filter for residuenames ----------------------
+    residue_indices = []
+    for atom in traj.top.atoms:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+            residue_indices += [atom.index]
+
+    
+
+    #--------------- select points clusters from the 1st frame ---------------
+    
+    radius = 0.4
+    frame = 0
+    Lx, Ly, Lz = traj.unitcell_lengths[frame_iterator[frame]]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    neighborhood = freud.locality.LinkCell(
+        box, points[frame], cell_width=radius)
+    query_args = dict(
+        mode='nearest', num_neighbors=12, r_max=radius, exclude_ii=False)
+    query_points = points[frame]
+    
+    if type(fraction_of_points) != type(None):
+        args = np.random.choice(
+            len(query_points), 
+            size=int(fraction_of_points * len(query_points)))
+        query_points = query_points[args]
+    
+    neighbors = []
+    for query_point in query_points:
+        neighbor_pairs = np.array(neighborhood.query(
+            np.array([query_point]), query_args).toNeighborList()[:])
+        neighbors += [neighbor_pairs[:,1]]
+    
+    cluster_points = []
+    for args in neighbors:
+        cluster_points += [np.copy(points[:,args])]
+
+    #------------------------------------------------------------------------
+
+
+
+    # Calculation
+    S = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+        hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        if type(residuename) != type(None):
+            hbonds_hash = {}
+            for hb in hbonds:
+                hbonds_hash[hb[0]] = hb
+            args = list(set(residue_indices) & set(hbonds[:,0]))
+            hbonds = np.array([hbonds_hash[arg] for arg in args])
+        
+        if len(hbonds) == 0:
+            continue
+        rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
+        rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
+
+        # Calculate nematic order
+        director = np.array([1,0,0])
+        orientations = [quaternion.q_between_vectors(director, v2) for v2 in rOH]
+        nematic = freud.order.Nematic(director)
+        nematic.compute(orientations)
+        S += [nematic.order]
+        
+    return np.mean(S)
+
+
 
 def Hbond_degree_of_alignment(grofile, trajfile, frame_iterator):
     """
