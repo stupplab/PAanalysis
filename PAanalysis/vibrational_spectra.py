@@ -96,7 +96,6 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
         
         points = positions[frame, args]
         if len(points) == 0:
-            r_C_C = np.append(r_C_C, [None], axis=0)
             continue
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
@@ -123,8 +122,13 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
 
         r_C_C = np.append(r_C_C, r_norm, axis=0)
 
-    r_C_C_mean = np.mean(r_C_C)
-
+    if len(r_C_C)!=0:
+        r_C_C_mean = np.mean(r_C_C)
+    else:
+       r_C_C_mean = None 
+    
+    if r_C_C_mean == 0:
+        r_C_C_mean = None
 
     return r_C_C_mean
 
@@ -334,8 +338,6 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
 
         points = positions[frame, indices['H']]
         if len(points) == 0:
-            r_CO_NH = np.append(r_CO_NH, [None], axis=0)
-            r_CO_HOH = np.append(r_CO_HOH, [None], axis=0)
             continue
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
@@ -384,11 +386,16 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
     if len(r_CO_NH)!=0:
         r_CO_NH_mean = np.mean(r_CO_NH)
     else:
-        r_CO_NH_mean = 0
+        r_CO_NH_mean = None
     if len(r_CO_HOH)!=0:
         r_CO_HOH_mean = np.mean(r_CO_HOH)
     else:
-        r_CO_HOH_mean = 0
+        r_CO_HOH_mean = None
+
+    if r_CO_NH_mean == 0:
+        r_CO_NH_mean = None
+    if r_CO_HOH_mean == 0:
+        r_CO_HOH_mean = None
 
     return r_CO_NH_mean, r_CO_HOH_mean
 
