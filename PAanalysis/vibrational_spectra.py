@@ -95,6 +95,9 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
         box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
         
         points = positions[frame, args]
+        if len(points) == 0:
+            r_C_C = np.append(r_C_C, None, axis=0)
+            continue
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
         query_points = positions[frame, args]
@@ -331,6 +334,8 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
 
         points = positions[frame, indices['H']]
         if len(points) == 0:
+            r_CO_NH = np.append(r_CO_NH, None, axis=0)
+            r_CO_HOH = np.append(r_CO_HOH, None, axis=0)
             continue
         neighborhood = freud.locality.LinkCell(box, points, cell_width=radius)
 
