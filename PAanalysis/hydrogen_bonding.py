@@ -271,7 +271,7 @@ def CO_degree_of_alignment(grofile, trajfile, frame_iterator):
     return asphericity
 
 
-def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
+def CO_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
     """
     NOTE: For atomistic simulations
     
@@ -297,9 +297,9 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
 
     residue_indices = []
     for atom in traj.top.atoms:
-        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
             residue_indices += [atom.index]
-
+    
 
     # identify the args for C=O bonds using mdtraj
     CO_indices = np.empty((0,2), dtype=int)
@@ -317,7 +317,7 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
 
     CO_indices = CO_indices.astype(int)
 
-    if type(residuename) != type(None):
+    if type(residuenames) != type(None):
         CO_hash = {}
         for id_ in CO_indices:
             CO_hash[id_[0]] = id_
@@ -347,7 +347,7 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
 
 
 
-def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
+def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
     """
     NOTE: For atomistic simulations
     Calculates baker-hubbard hydrogen bond for frame_iterator
@@ -373,7 +373,7 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
 
     residue_indices = []
     for atom in traj.top.atoms:
-        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
             residue_indices += [atom.index]
 
 
@@ -392,7 +392,7 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
             if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
                 hbonds_ += [b]
         hbonds = np.array(hbonds_)
-        if type(residuename) != type(None):
+        if type(residuenames) != type(None):
             hbonds_hash = {}
             for hb in hbonds:
                 hbonds_hash[hb[0]] = hb
