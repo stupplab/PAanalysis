@@ -10,6 +10,4 @@ from .res_res_separation import res_res_separation
 from .hydrogen_bonding import *
 from .vibrational_spectra import *
 from .RMSF import *
-
-
 from .curvature import C16_C_eigs
