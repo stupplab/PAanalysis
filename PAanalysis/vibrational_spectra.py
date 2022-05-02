@@ -13,7 +13,7 @@ import time
 
 
 
-def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None, filenamerdf=None, filenameft=None):
+def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuenames=None, filenamerdf=None, filenameft=None):
     """Calculates avearge distance between O (C=O) and H (NH) and H (HOH)
     r_CO_CO
 
@@ -67,10 +67,10 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
     
     residue_indices = []
     for atom in traj.top.atoms:
-        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
             residue_indices += [atom.index]
     
-    if type(residuename) != type(None):
+    if type(residuenames) != type(None):
         args = list(set(residue_indices) & set(indices['C']))
     else:
         args = indices['C']
@@ -248,7 +248,7 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
 
 
 
-def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None, filenamerdf=None, filenameft=None):
+def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuenames=None, filenamerdf=None, filenameft=None):
     """Calculates avearge distance between O (C=O) and H (NH) and H (HOH)
     r_CO_HN
     r_CO_HOH
@@ -306,10 +306,10 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuename=None,
     
     residue_indices = []
     for atom in traj.top.atoms:
-        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
+        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
             residue_indices += [atom.index]
     
-    if type(residuename) != type(None):
+    if type(residuenames) != type(None):
         indices['C'] = list(set(residue_indices) & set(indices['C']))
         indices['H'] = list(set(residue_indices) & set(indices['H']))
         indices['O'] = list(set(residue_indices) & set(indices['O']))
