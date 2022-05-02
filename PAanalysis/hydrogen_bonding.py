@@ -23,6 +23,12 @@ def Hbonds(grofile, trajfile, frame_iterator, residuenames=None, freq=0.1):
     
     positions = traj.xyz
     
+    if type(residuenames) != type(None):
+        residue_indices = []
+        for atom in traj.top.atoms:
+            if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
+                residue_indices += [atom.index]
+
     hbonds_all = np.empty((0,3))
     framewise_hbonds = []
     for f in frame_iterator:
@@ -31,27 +37,31 @@ def Hbonds(grofile, trajfile, frame_iterator, residuenames=None, freq=0.1):
         hbonds_=[]
         for b in hbonds:
             if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
-                hbonds_ += [b]
+                if type(residuenames) != type(None):
+                    if (traj.top.atom(b[0]).index in residue_indices) or (traj.top.atom(b[2]).index in residue_indices):
+                        hbonds_ += [b]
+                else:
+                    hbonds_ += [b]
         hbonds = np.array(hbonds_)
         
-        if len(hbonds) ==0:
+        if len(hbonds) == 0:
             hbonds = hbonds.reshape((0,3))
 
         framewise_hbonds += [ hbonds ]
 
         hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
         
+        
+    num_hbonds_perframe = np.mean([len(hbonds_f) for hbonds_f in framewise_hbonds])
+    
+    return num_hbonds_perframe
+
     
     hbonds_all = np.unique(hbonds_all, axis=0)
-    
-    
-    if type(residuenames) != type(None):
-        residue_indices = []
-        for atom in traj.top.atoms:
-            if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
-                residue_indices += [atom.index]
-    
+
     num_hbonds_all = len(hbonds_all)
+
+
 
     r_DH=[]
     r_DA=[]
