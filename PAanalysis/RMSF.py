@@ -102,7 +102,7 @@ def RMSF(grofile, trajfile, frame_iterator, make_orientation_invariate=True):
 
 
 
-def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames, make_orientation_invariate=True, residuenames_for_invariance=None):
+def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None, make_orientation_invariate=True, residuenames_for_invariance=None):
     """
      - atomistic simulation
     Root mean square fluctuation of the peptide backbone
