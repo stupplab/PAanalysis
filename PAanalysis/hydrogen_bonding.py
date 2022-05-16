@@ -53,81 +53,71 @@ def Hbonds(grofile, trajfile, frame_iterator, residuenames=None, freq=0.1):
         
         
     num_hbonds_perframe = np.mean([len(hbonds_f) for hbonds_f in framewise_hbonds])
-    
-    return num_hbonds_perframe
+    num_hbonds_perframe_std = np.std([len(hbonds_f) for hbonds_f in framewise_hbonds])
+
+    return np.array([num_hbonds_perframe, num_hbonds_perframe_std])
 
     
-    hbonds_all = np.unique(hbonds_all, axis=0)
+    # hbonds_all = np.unique(hbonds_all, axis=0)
 
-    num_hbonds_all = len(hbonds_all)
+    # num_hbonds_all = len(hbonds_all)
 
 
 
-    r_DH=[]
-    r_DA=[]
-    r_AH=[]
-    r_DH_all=[]
-    r_DA_all=[]
-    r_AH_all=[]
-    theta=[]
-    num_hbonds = 0
+    # r_DH=[]
+    # r_DA=[]
+    # r_AH=[]
+    # r_DH_all=[]
+    # r_DA_all=[]
+    # r_AH_all=[]
+    # theta=[]
+    # num_hbonds = []
 
     
-    for i,f in enumerate(frame_iterator):
-        Lx, Ly, Lz = traj.unitcell_lengths[f]
-        hbonds = framewise_hbonds[i]
-        if type(residuenames) != type(None):
-            hbonds_hash = {}
-            for hb in hbonds:
-                hbonds_hash[hb[0]] = hb
-            args = list(set(residue_indices) & set(hbonds[:,0]))
-            hbonds = np.array([hbonds_hash[arg] for arg in args])
+    # for i,f in enumerate(frame_iterator):
+    #     Lx, Ly, Lz = traj.unitcell_lengths[f]
+    #     hbonds = framewise_hbonds[i]
+    #     if type(residuenames) != type(None):
+    #         hbonds_hash = {}
+    #         for hb in hbonds:
+    #             hbonds_hash[hb[0]] = hb
+    #         args = list(set(residue_indices) & set(hbonds[:,0]))
+    #         hbonds = np.array([hbonds_hash[arg] for arg in args])
             
-        if len(hbonds)==0:
-            continue
-        num_hbonds += len(hbonds)
-        posH = positions[f,hbonds[:,1]]
-        posD = utils.unwrap_points(positions[f,hbonds[:,0]], posH, Lx, Ly, Lz)
-        posA = utils.unwrap_points(positions[f,hbonds[:,2]], posH, Lx, Ly, Lz)
-        r_AH_ = np.linalg.norm(posA-posH, axis=-1)
-        r_DA_ = np.linalg.norm(posD-posA, axis=-1)
-        r_DH_ = np.linalg.norm(posD-posH, axis=-1)
-        r_DH += list(r_DH_)
-        r_AH += list(r_AH_)
-        r_DA += list(r_DA_)
+    #     if len(hbonds)==0:
+    #         continue
+    #     num_hbonds += [len(hbonds)]
         
-        posH = positions[f,hbonds_all[:,1]]
-        posD = utils.unwrap_points(positions[f,hbonds_all[:,0]], posH, Lx, Ly, Lz)
-        posA = utils.unwrap_points(positions[f,hbonds_all[:,2]], posH, Lx, Ly, Lz)
-        r_AH_all_ = np.linalg.norm(posA-posH, axis=-1)
-        r_DA_all_ = np.linalg.norm(posD-posA, axis=-1)
-        r_DH_all_ = np.linalg.norm(posD-posH, axis=-1)
-        r_DH_all += list(r_DH_all_)
-        r_AH_all += list(r_AH_all_)
-        r_DA_all += list(r_DA_all_)
+    #     # posH = positions[f,hbonds[:,1]]
+    #     # posD = utils.unwrap_points(positions[f,hbonds[:,0]], posH, Lx, Ly, Lz)
+    #     # posA = utils.unwrap_points(positions[f,hbonds[:,2]], posH, Lx, Ly, Lz)
+    #     # r_AH_ = np.linalg.norm(posA-posH, axis=-1)
+    #     # r_DA_ = np.linalg.norm(posD-posA, axis=-1)
+    #     # r_DH_ = np.linalg.norm(posD-posH, axis=-1)
+    #     # r_DH += list(r_DH_)
+    #     # r_AH += list(r_AH_)
+    #     # r_DA += list(r_DA_)
         
-        v1 = posA-posH
-        v2 = posD-posH
-        theta_ = [ abs(quaternion.angle_v1tov2(v1[i],v2[i])) for i in range(v1.shape[0]) ]
-        theta += [ theta_ ]
+    #     # posH = positions[f,hbonds_all[:,1]]
+    #     # posD = utils.unwrap_points(positions[f,hbonds_all[:,0]], posH, Lx, Ly, Lz)
+    #     # posA = utils.unwrap_points(positions[f,hbonds_all[:,2]], posH, Lx, Ly, Lz)
+    #     # r_AH_all_ = np.linalg.norm(posA-posH, axis=-1)
+    #     # r_DA_all_ = np.linalg.norm(posD-posA, axis=-1)
+    #     # r_DH_all_ = np.linalg.norm(posD-posH, axis=-1)
+    #     # r_DH_all += list(r_DH_all_)
+    #     # r_AH_all += list(r_AH_all_)
+    #     # r_DA_all += list(r_DA_all_)
+        
+    #     # v1 = posA-posH
+    #     # v2 = posD-posH
+    #     # theta_ = [ abs(quaternion.angle_v1tov2(v1[i],v2[i])) for i in range(v1.shape[0]) ]
+    #     # theta += [ theta_ ]
 
-    num_hbonds_perframe = num_hbonds/len(frame_iterator)
+    # num_hbonds_perframe = np.mean(num_hbonds)
+    # num_hbonds_perframe_std = np.std(num_hbonds)
     
+    # print(num_hbonds_perframe, num_hbonds_perframe_std)
     
-    return (np.mean(r_DH),
-            np.std(r_DH),
-            np.mean(r_AH),
-            np.std(r_AH), 
-            np.mean(r_DA),
-            np.std(r_DA),
-            num_hbonds_perframe,
-            np.mean(r_DH_all),
-            np.std(r_DH_all),
-            np.mean(r_AH_all),
-            np.std(r_AH_all), 
-            np.mean(r_DA_all),
-            np.std(r_DA_all),
-            num_hbonds_all)
 
 
 
