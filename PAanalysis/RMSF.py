@@ -331,10 +331,11 @@ def CC_RMSF(grofile, trajfile, frame_iterator, residuenames=None):
         rmsf_ = np.sqrt( np.mean(( r_s - mu )**2) ) #/ mu
         rmsf += [rmsf_]
         
-    rmsf = np.mean(rmsf)
+    rmsf_mean = np.mean(rmsf)
+    rmsf_std = np.std(rmsf)
     #------------------------------------------------------------------------
 
-    return rmsf
+    return rmsf_mean, rmsf_std
 
 
 
