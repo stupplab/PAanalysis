@@ -124,7 +124,6 @@ def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None,
     #------------------------------------ Non-water atoms ------------------------
     backbone_args = []
     not_water_args = []
-    # specific_args = []
     alkyl_args = []
     for atom in traj.top.atoms:
         if atom.residue.name in ['HOH', 'NA', 'CL', 'ION']:
@@ -134,8 +133,6 @@ def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None,
         if atom.name in ['C', 'N', 'CA']:
             backbone_args += [atom.index]
         not_water_args += [atom.index]
-        # if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
-            # specific_args += [atom.index]
     backbone_args = np.array(backbone_args)
     not_water_args = np.array(not_water_args)
     
@@ -151,7 +148,7 @@ def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None,
                 residue_indices += [atom.index]
                 
         args = list(set(residue_indices) & set(args))
-    
+        
     if type(residuenames_for_invariance) != type(None):
         residue_indices = []
         for atom in traj.top.atoms:
@@ -192,6 +189,7 @@ def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None,
     #------------------------------------------------------------------------
     
     #---------------------- Make orientational invariant --------------------
+    
     if make_orientation_invariate:
         for n,f in enumerate(frame_iterator):
             points_f = np.copy(points[n])
@@ -227,8 +225,12 @@ def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None,
     #------------------------------------------------------------------------
     
     #-------------------- calculate rmsf per duration -----------------------
-    
-    rmsf = np.sqrt(np.mean((points - points[0:1])**2, axis=(1,2)))
+    rmsf = [0]
+    for d in range(1,int(len(points)/2)):
+        rmsf += [ np.sqrt(np.mean((points[d:] - points[:-d])**2)) ]
+    rmsf = np.array(rmsf)
+
+    # rmsf = np.sqrt(np.mean((points - points[[0]])**2, axis=(1,2)))
 
     #------------------------------------------------------------------------
 

@@ -124,127 +124,129 @@ def r_C_C(grofile, trajfile, frame_iterator, topfile, molname, residuenames=None
 
     if len(r_C_C)!=0:
         r_C_C_mean = np.mean(r_C_C)
+        r_C_C_std = np.std(r_C_C)
     else:
-       r_C_C_mean = None 
-    
+       r_C_C_mean = None
+       r_C_C_std = None
     if r_C_C_mean == 0:
         r_C_C_mean = None
+        r_C_C_std = None
 
-    return r_C_C_mean
+    return np.array([r_C_C_mean, r_C_C_std])
 
-    #---------------------------------------------------------------------------------
+    # #---------------------------------------------------------------------------------
 
-    # r_C_C
+    # # r_C_C
     
-    bins = 50
-    r_min = 0.1
-    r_max = 2
-    num_CO_permol = int(np.sum(molids == 0))
-    rdf=[]
-    for i in range(num_CO_permol):
-        rdf += [ freud.density.RDF(bins=bins, r_min=r_min, r_max=r_max) ]
+    # bins = 50
+    # r_min = 0.1
+    # r_max = 2
+    # num_CO_permol = int(np.sum(molids == 0))
+    # rdf=[]
+    # for i in range(num_CO_permol):
+    #     rdf += [ freud.density.RDF(bins=bins, r_min=r_min, r_max=r_max) ]
     
 
-    for frame in frame_iterator:
-        Lx, Ly, Lz = traj.unitcell_lengths[frame]
-        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    # for frame in frame_iterator:
+    #     Lx, Ly, Lz = traj.unitcell_lengths[frame]
+    #     box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
 
-        for i in range(num_CO_permol):
-            args = indices['C'][i::num_CO_permol]
-            points = positions[frame, args]
-            rdf[i].compute(system=(box, points), reset=False)
+    #     for i in range(num_CO_permol):
+    #         args = indices['C'][i::num_CO_permol]
+    #         points = positions[frame, args]
+    #         rdf[i].compute(system=(box, points), reset=False)
 
-    r_C_C = []
-    rdf_mean = 0
-    for i in range(num_CO_permol):
-        r_C_C += [ np.sum(rdf[i].rdf*rdf[i].bin_centers) / np.sum(rdf[i].rdf) ]
-        rdf_mean += rdf[i].rdf
-    rdf_mean /= num_CO_permol
+    # r_C_C = []
+    # rdf_mean = 0
+    # for i in range(num_CO_permol):
+    #     r_C_C += [ np.sum(rdf[i].rdf*rdf[i].bin_centers) / np.sum(rdf[i].rdf) ]
+    #     rdf_mean += rdf[i].rdf
+    # rdf_mean /= num_CO_permol
 
 
 
-    # Plot mean rdf
-    if type(filenamerdf) != type(None):
+    # # Plot mean rdf
+    # if type(filenamerdf) != type(None):
         
-        import matplotlib.pyplot as plt
+    #     import matplotlib.pyplot as plt
 
-        x = rdf[0].bin_centers
-        y = rdf_mean
+    #     x = rdf[0].bin_centers
+    #     y = rdf_mean
 
-        fig = plt.figure(figsize=(4/1.2,3/1.2))
-        plt.plot(x, y, marker='')
-        plt.title('RDF of C (C=O)')
-        plt.xlabel('Radius')
-        plt.ylabel('RDF')
-        plt.subplots_adjust(bottom=0.18, left=0.16)
-        plt.savefig(filenamerdf, dpi=400)
-
-
-    #---------------------------------------------------------------------------------
+    #     fig = plt.figure(figsize=(4/1.2,3/1.2))
+    #     plt.plot(x, y, marker='')
+    #     plt.title('RDF of C (C=O)')
+    #     plt.xlabel('Radius')
+    #     plt.ylabel('RDF')
+    #     plt.subplots_adjust(bottom=0.18, left=0.16)
+    #     plt.savefig(filenamerdf, dpi=400)
 
 
-    # Fourier transform of positions C
-    # freq_range = (0.1, 2*np.pi/.1)
-    freq_range = (0, 20)
-    x = np.linspace(freq_range[0], freq_range[1], 40)
-    y = np.linspace(freq_range[0], freq_range[1], 40)
-    z = np.linspace(freq_range[0], freq_range[1], 40)
-    q_vectors = np.array(list(itertools.product(x,y,z)))
-    q_norm = np.linalg.norm(q_vectors, axis=-1)
+    # #---------------------------------------------------------------------------------
 
-    num_CO_permol = int(np.sum(molids == 0))
 
-    bins = np.linspace(freq_range[0],20,200)
-    indices_q = np.digitize(q_norm, bins)-1 # -1 shifts the indices from left to right edge 
+    # # Fourier transform of positions C
+    # # freq_range = (0.1, 2*np.pi/.1)
+    # freq_range = (0, 20)
+    # x = np.linspace(freq_range[0], freq_range[1], 40)
+    # y = np.linspace(freq_range[0], freq_range[1], 40)
+    # z = np.linspace(freq_range[0], freq_range[1], 40)
+    # q_vectors = np.array(list(itertools.product(x,y,z)))
+    # q_norm = np.linalg.norm(q_vectors, axis=-1)
 
-    Sq_binned = []
-    for n in range(num_CO_permol):
+    # num_CO_permol = int(np.sum(molids == 0))
+
+    # bins = np.linspace(freq_range[0],20,200)
+    # indices_q = np.digitize(q_norm, bins)-1 # -1 shifts the indices from left to right edge 
+
+    # Sq_binned = []
+    # for n in range(num_CO_permol):
         
-        args = indices['C'][n::num_CO_permol]
+    #     args = indices['C'][n::num_CO_permol]
         
-        Sq_frame = []
-        for frame in frame_iterator:
-            R = positions[frame, args]
-            ft = np.sum(np.exp(-1j*R.dot(q_vectors.T)), axis=0)
-            Sq_frame += [np.abs(ft)/R.shape[0]]
-        Sq = np.mean(Sq_frame, axis=0)
+    #     Sq_frame = []
+    #     for frame in frame_iterator:
+    #         R = positions[frame, args]
+    #         ft = np.sum(np.exp(-1j*R.dot(q_vectors.T)), axis=0)
+    #         Sq_frame += [np.abs(ft)/R.shape[0]]
+    #     Sq = np.mean(Sq_frame, axis=0)
         
 
-        Sq_binned_ = np.zeros(len(bins))
-        num_i = np.zeros(len(bins))
-        for i in indices_q:
-            Sq_binned_[i] += Sq[i]
-            num_i[i] += 1
-        Sq_binned_ /= num_i
+    #     Sq_binned_ = np.zeros(len(bins))
+    #     num_i = np.zeros(len(bins))
+    #     for i in indices_q:
+    #         Sq_binned_[i] += Sq[i]
+    #         num_i[i] += 1
+    #     Sq_binned_ /= num_i
         
-        Sq_binned += [Sq_binned_]
-    
-    
-    Sq_binned = np.mean(Sq_binned, axis=0)
-
+    #     Sq_binned += [Sq_binned_]
     
     
-    # Plot FT
-    if type(filenameft) != type(None):
+    # Sq_binned = np.mean(Sq_binned, axis=0)
+
+    
+    
+    # # Plot FT
+    # if type(filenameft) != type(None):
         
-        import matplotlib.pyplot as plt
+    #     import matplotlib.pyplot as plt
 
-        x = bins
-        y = Sq_binned
+    #     x = bins
+    #     y = Sq_binned
 
-        fig = plt.figure(figsize=(4/1.2,3/1.2))
-        plt.plot(x, y, marker='')
-        plt.title('FT of C (C=O)')
-        plt.xlabel(r'2$\pi$/$\lambda$')
-        plt.ylabel('FT')
-        plt.subplots_adjust(bottom=0.18, left=0.16)
-        plt.savefig(filenameft, dpi=400)
+    #     fig = plt.figure(figsize=(4/1.2,3/1.2))
+    #     plt.plot(x, y, marker='')
+    #     plt.title('FT of C (C=O)')
+    #     plt.xlabel(r'2$\pi$/$\lambda$')
+    #     plt.ylabel('FT')
+    #     plt.subplots_adjust(bottom=0.18, left=0.16)
+    #     plt.savefig(filenameft, dpi=400)
         
         
-    #---------------------------------------------------------------------------------
+    # #---------------------------------------------------------------------------------
 
 
-    return r_C_C, np.mean(r_C_C)
+    # return r_C_C, np.mean(r_C_C)
 
 
 
@@ -385,134 +387,140 @@ def r_O_H(grofile, trajfile, frame_iterator, topfile, molname, residuenames=None
 
     if len(r_CO_NH)!=0:
         r_CO_NH_mean = np.mean(r_CO_NH)
+        r_CO_NH_std = np.std(r_CO_NH)
     else:
         r_CO_NH_mean = None
+        r_CO_NH_std = None
     if len(r_CO_HOH)!=0:
         r_CO_HOH_mean = np.mean(r_CO_HOH)
+        r_CO_HOH_std = np.std(r_CO_HOH)
     else:
         r_CO_HOH_mean = None
+        r_CO_HOH_std = None
 
     if r_CO_NH_mean == 0:
         r_CO_NH_mean = None
+        r_CO_NH_std = None
     if r_CO_HOH_mean == 0:
         r_CO_HOH_mean = None
+        r_CO_HOH_std = None
 
-    return r_CO_NH_mean, r_CO_HOH_mean
+    return np.array([r_CO_NH_mean, r_CO_NH_std, r_CO_HOH_mean, r_CO_HOH_std])
 
-    #---------------------------------------------------------------------------------
+    # #---------------------------------------------------------------------------------
 
-    # r_CO_NH using rdf
+    # # r_CO_NH using rdf
     
-    bins = 50
-    r_min = 0.1
-    r_max = 2
-    num_CO_permol = int(np.sum(molids == 0))
-    rdf=[]
-    for i in range(num_CO_permol):
-        rdf += [ freud.density.RDF(bins=bins, r_min=r_min, r_max=r_max) ]
+    # bins = 50
+    # r_min = 0.1
+    # r_max = 2
+    # num_CO_permol = int(np.sum(molids == 0))
+    # rdf=[]
+    # for i in range(num_CO_permol):
+    #     rdf += [ freud.density.RDF(bins=bins, r_min=r_min, r_max=r_max) ]
     
 
-    for frame in frame_iterator:
-        Lx, Ly, Lz = traj.unitcell_lengths[frame]
-        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    # for frame in frame_iterator:
+    #     Lx, Ly, Lz = traj.unitcell_lengths[frame]
+    #     box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
 
-        for i in range(num_CO_permol):
-            args = indices['H'][i::num_CO_permol]
-            points = positions[frame, args]
-            args = indices['O'][i::num_CO_permol]
-            query_points = positions[frame, args]
-            rdf[i].compute(system=(box, points), query_points=query_points, reset=False)
+    #     for i in range(num_CO_permol):
+    #         args = indices['H'][i::num_CO_permol]
+    #         points = positions[frame, args]
+    #         args = indices['O'][i::num_CO_permol]
+    #         query_points = positions[frame, args]
+    #         rdf[i].compute(system=(box, points), query_points=query_points, reset=False)
 
-    r_CO_NH = []
-    rdf_mean = 0
-    for i in range(num_CO_permol):
-        r_CO_NH += [ np.sum(rdf[i].rdf*rdf[i].bin_centers) / np.sum(rdf[i].rdf) ]
-        rdf_mean += rdf[i].rdf
-    rdf_mean /= num_CO_permol
+    # r_CO_NH = []
+    # rdf_mean = 0
+    # for i in range(num_CO_permol):
+    #     r_CO_NH += [ np.sum(rdf[i].rdf*rdf[i].bin_centers) / np.sum(rdf[i].rdf) ]
+    #     rdf_mean += rdf[i].rdf
+    # rdf_mean /= num_CO_permol
 
 
 
-    # Plot mean rdf
-    if type(filenamerdf) != type(None):
+    # # Plot mean rdf
+    # if type(filenamerdf) != type(None):
         
-        import matplotlib.pyplot as plt
+    #     import matplotlib.pyplot as plt
 
-        x = rdf[0].bin_centers
-        y = rdf_mean
+    #     x = rdf[0].bin_centers
+    #     y = rdf_mean
 
-        fig = plt.figure(figsize=(4/1.2,3/1.2))
-        plt.plot(x, y, marker='')
-        plt.title('RDF C=O-NH')
-        plt.xlabel('Radius')
-        plt.ylabel('RDF')
-        plt.subplots_adjust(bottom=0.18, left=0.16)
-        plt.savefig(filenamerdf, dpi=400)
+    #     fig = plt.figure(figsize=(4/1.2,3/1.2))
+    #     plt.plot(x, y, marker='')
+    #     plt.title('RDF C=O-NH')
+    #     plt.xlabel('Radius')
+    #     plt.ylabel('RDF')
+    #     plt.subplots_adjust(bottom=0.18, left=0.16)
+    #     plt.savefig(filenamerdf, dpi=400)
 
 
-    #---------------------------------------------------------------------------------
+    # #---------------------------------------------------------------------------------
 
-    # Fourier transform of positions C
-    # freq_range = (0.1, 2*np.pi/.1)
-    freq_range = (0, 20)
-    x = np.linspace(freq_range[0], freq_range[1], 40)
-    y = np.linspace(freq_range[0], freq_range[1], 40)
-    z = np.linspace(freq_range[0], freq_range[1], 40)
-    q_vectors = np.array(list(itertools.product(x,y,z)))
-    q_norm = np.linalg.norm(q_vectors, axis=-1)
+    # # Fourier transform of positions C
+    # # freq_range = (0.1, 2*np.pi/.1)
+    # freq_range = (0, 20)
+    # x = np.linspace(freq_range[0], freq_range[1], 40)
+    # y = np.linspace(freq_range[0], freq_range[1], 40)
+    # z = np.linspace(freq_range[0], freq_range[1], 40)
+    # q_vectors = np.array(list(itertools.product(x,y,z)))
+    # q_norm = np.linalg.norm(q_vectors, axis=-1)
 
-    num_CO_permol = int(np.sum(molids == 0))
+    # num_CO_permol = int(np.sum(molids == 0))
 
-    bins = np.linspace(freq_range[0],20,200)
-    indices_q = np.digitize(q_norm, bins)-1 # -1 shifts the indices from left to right edge 
+    # bins = np.linspace(freq_range[0],20,200)
+    # indices_q = np.digitize(q_norm, bins)-1 # -1 shifts the indices from left to right edge 
 
-    Sq_binned = []
-    for n in range(num_CO_permol):
+    # Sq_binned = []
+    # for n in range(num_CO_permol):
         
-        args = np.append(indices['O'][n::num_CO_permol], indices['H'][n::num_CO_permol], axis=0)
+    #     args = np.append(indices['O'][n::num_CO_permol], indices['H'][n::num_CO_permol], axis=0)
         
-        Sq_frame = []
-        for frame in frame_iterator:
-            R = positions[frame, args]
-            ft = np.sum(np.exp(-1j*R.dot(q_vectors.T)), axis=0)
-            Sq_frame += [np.abs(ft)/R.shape[0]]
-        Sq = np.mean(Sq_frame, axis=0)
+    #     Sq_frame = []
+    #     for frame in frame_iterator:
+    #         R = positions[frame, args]
+    #         ft = np.sum(np.exp(-1j*R.dot(q_vectors.T)), axis=0)
+    #         Sq_frame += [np.abs(ft)/R.shape[0]]
+    #     Sq = np.mean(Sq_frame, axis=0)
 
 
-        Sq_binned_ = np.zeros(len(bins))
-        num_i = np.zeros(len(bins))
-        for i in indices_q:
-            Sq_binned_[i] += Sq[i]
-            num_i[i] += 1
-        Sq_binned_ /= num_i
+    #     Sq_binned_ = np.zeros(len(bins))
+    #     num_i = np.zeros(len(bins))
+    #     for i in indices_q:
+    #         Sq_binned_[i] += Sq[i]
+    #         num_i[i] += 1
+    #     Sq_binned_ /= num_i
         
-        Sq_binned += [Sq_binned_]
+    #     Sq_binned += [Sq_binned_]
     
     
-    Sq_binned = np.mean(Sq_binned, axis=0)
+    # Sq_binned = np.mean(Sq_binned, axis=0)
 
     
     
-    # Plot FT
-    if type(filenameft) != type(None):
+    # # Plot FT
+    # if type(filenameft) != type(None):
         
-        import matplotlib.pyplot as plt
+    #     import matplotlib.pyplot as plt
 
-        x = bins
-        y = Sq_binned
+    #     x = bins
+    #     y = Sq_binned
 
-        fig = plt.figure(figsize=(4/1.2,3/1.2))
-        plt.plot(x, y, marker='')
-        plt.title('FT of O-H (C=O-NH)')
-        plt.xlabel(r'2$\pi$/$\lambda$')
-        plt.ylabel('FT')
-        plt.subplots_adjust(bottom=0.18, left=0.16)
-        plt.savefig(filenameft, dpi=400)
+    #     fig = plt.figure(figsize=(4/1.2,3/1.2))
+    #     plt.plot(x, y, marker='')
+    #     plt.title('FT of O-H (C=O-NH)')
+    #     plt.xlabel(r'2$\pi$/$\lambda$')
+    #     plt.ylabel('FT')
+    #     plt.subplots_adjust(bottom=0.18, left=0.16)
+    #     plt.savefig(filenameft, dpi=400)
 
     
-    #---------------------------------------------------------------------------------
+    # #---------------------------------------------------------------------------------
 
 
-    return r_CO_NH_mean, r_CO_HOH_mean, r_CO_NH, np.mean(r_CO_NH)
+    # return r_CO_NH_mean, r_CO_HOH_mean, r_CO_NH, np.mean(r_CO_NH)
 
 
 
