@@ -281,16 +281,19 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
     
     import freud
 
-    traj = mdtraj.load(trajfile, top=grofile)
-    
-    positions = traj.xyz
 
-    num_frames = traj.n_frames
+    #------------------------------------ Config -------------------------------
+    traj0 = mdtraj.load(grofile)
+    frame0 = traj0.xyz
+    traj = mdtraj.load(trajfile, top=grofile)
+    positions = np.append(frame0, traj.xyz, axis=0)
+    num_frames = len(positions)
+    unitcell_lengths = [traj0.unitcell_lengths[0]] + [traj.unitcell_lengths[f] for f in range(len(traj))]
+    #------------------------------------------------------------------------
 
 
     #------------------------------------ Box Images ------------------------
     # Identify images if particles jump more than half the box length
-    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
     images = utils.find_box_images(positions, unitcell_lengths)
 
     #------------------------------------------------------------------------
@@ -344,7 +347,7 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
         nematic.compute(orientations)
         S += [nematic.order]
         
-    return np.mean(S)
+    return np.mean(S), np.std(S)
 
 
 
@@ -358,16 +361,18 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
     
     import freud 
 
+    #------------------------------------ Config -------------------------------
+    traj0 = mdtraj.load(grofile)
+    frame0 = traj0.xyz
     traj = mdtraj.load(trajfile, top=grofile)
-    
-    positions = traj.xyz
-
-    num_frames = traj.n_frames
+    positions = np.append(frame0, traj.xyz, axis=0)
+    num_frames = len(positions)
+    unitcell_lengths = [traj0.unitcell_lengths[0]] + [traj.unitcell_lengths[f] for f in range(len(traj))]
+    #------------------------------------------------------------------------
 
 
     #------------------------------------ Box Images ------------------------
     # Identify images if particles jump more than half the box length
-    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
     images = utils.find_box_images(positions, unitcell_lengths)
 
     #------------------------------------------------------------------------
@@ -413,7 +418,7 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
         nematic.compute(orientations)
         S += [nematic.order]
         
-    return np.mean(S)
+    return np.mean(S), np.std(S)
 
 
 def local_Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
