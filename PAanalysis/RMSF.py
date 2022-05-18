@@ -225,9 +225,9 @@ def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None,
     #------------------------------------------------------------------------
     
     #-------------------- calculate rmsf per duration -----------------------
-    rmsf = [0]
-    for d in range(1,int(len(points)/2)):
-        rmsf += [ np.sqrt(np.mean((points[d:] - points[:-d])**2)) ]
+    rmsf = [[0,0,0]]
+    for d in range(1,int(len(points))):
+        rmsf += [ np.sqrt(np.mean((points[d:] - points[:-d])**2, axis=(0,1))) ]
     rmsf = np.array(rmsf)
 
     # rmsf = np.sqrt(np.mean((points - points[[0]])**2, axis=(1,2)))
