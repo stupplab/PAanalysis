@@ -220,8 +220,11 @@ def RMSF_specific_residues(grofile, trajfile, frame_iterator, residuenames=None,
             # points_f = [ quaternion.qv_mult(q,p) for p in points_f]
             
             # project each point on the eigenvectors
+            
             points_f = np.array([ p.dot(eigvec)/np.linalg.norm(eigvec,axis=0) for p in points_f])
             points[n] = points_f
+            
+        
     #------------------------------------------------------------------------
     
     #-------------------- calculate rmsf per duration -----------------------
