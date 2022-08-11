@@ -311,6 +311,7 @@ def find_box_images(positions, unitcell_lengths):
     """
     num_frames = positions.shape[0]
     images = np.zeros((positions.shape[0], positions.shape[1], 3))
+
     for f in range(1,num_frames):
         Lx, Ly, Lz = unitcell_lengths[f]
         

@@ -23,6 +23,12 @@ def Hbonds(grofile, trajfile, frame_iterator, residuenames=None, freq=0.1):
     
     positions = traj.xyz
     
+    if type(residuenames) != type(None):
+        residue_indices = []
+        for atom in traj.top.atoms:
+            if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
+                residue_indices += [atom.index]
+
     hbonds_all = np.empty((0,3))
     framewise_hbonds = []
     for f in frame_iterator:
@@ -31,93 +37,87 @@ def Hbonds(grofile, trajfile, frame_iterator, residuenames=None, freq=0.1):
         hbonds_=[]
         for b in hbonds:
             if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
-                hbonds_ += [b]
+                if type(residuenames) != type(None):
+                    if (traj.top.atom(b[0]).index in residue_indices) or (traj.top.atom(b[2]).index in residue_indices):
+                        hbonds_ += [b]
+                else:
+                    hbonds_ += [b]
         hbonds = np.array(hbonds_)
         
-        if len(hbonds) ==0:
+        if len(hbonds) == 0:
             hbonds = hbonds.reshape((0,3))
 
         framewise_hbonds += [ hbonds ]
 
         hbonds_all = np.append(hbonds_all, hbonds, axis=0).astype(int)
         
-    
-    hbonds_all = np.unique(hbonds_all, axis=0)
-    
-    
-    if type(residuenames) != type(None):
-        residue_indices = []
-        for atom in traj.top.atoms:
-            if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
-                residue_indices += [atom.index]
-    
-    num_hbonds_all = len(hbonds_all)
+        
+    num_hbonds_perframe = np.mean([len(hbonds_f) for hbonds_f in framewise_hbonds])
+    num_hbonds_perframe_std = np.std([len(hbonds_f) for hbonds_f in framewise_hbonds])
 
-    r_DH=[]
-    r_DA=[]
-    r_AH=[]
-    r_DH_all=[]
-    r_DA_all=[]
-    r_AH_all=[]
-    theta=[]
-    num_hbonds = 0
+    return np.array([num_hbonds_perframe, num_hbonds_perframe_std])
 
     
-    for i,f in enumerate(frame_iterator):
-        Lx, Ly, Lz = traj.unitcell_lengths[f]
-        hbonds = framewise_hbonds[i]
-        if type(residuenames) != type(None):
-            hbonds_hash = {}
-            for hb in hbonds:
-                hbonds_hash[hb[0]] = hb
-            args = list(set(residue_indices) & set(hbonds[:,0]))
-            hbonds = np.array([hbonds_hash[arg] for arg in args])
+    # hbonds_all = np.unique(hbonds_all, axis=0)
+
+    # num_hbonds_all = len(hbonds_all)
+
+
+
+    # r_DH=[]
+    # r_DA=[]
+    # r_AH=[]
+    # r_DH_all=[]
+    # r_DA_all=[]
+    # r_AH_all=[]
+    # theta=[]
+    # num_hbonds = []
+
+    
+    # for i,f in enumerate(frame_iterator):
+    #     Lx, Ly, Lz = traj.unitcell_lengths[f]
+    #     hbonds = framewise_hbonds[i]
+    #     if type(residuenames) != type(None):
+    #         hbonds_hash = {}
+    #         for hb in hbonds:
+    #             hbonds_hash[hb[0]] = hb
+    #         args = list(set(residue_indices) & set(hbonds[:,0]))
+    #         hbonds = np.array([hbonds_hash[arg] for arg in args])
             
-        if len(hbonds)==0:
-            continue
-        num_hbonds += len(hbonds)
-        posH = positions[f,hbonds[:,1]]
-        posD = utils.unwrap_points(positions[f,hbonds[:,0]], posH, Lx, Ly, Lz)
-        posA = utils.unwrap_points(positions[f,hbonds[:,2]], posH, Lx, Ly, Lz)
-        r_AH_ = np.linalg.norm(posA-posH, axis=-1)
-        r_DA_ = np.linalg.norm(posD-posA, axis=-1)
-        r_DH_ = np.linalg.norm(posD-posH, axis=-1)
-        r_DH += list(r_DH_)
-        r_AH += list(r_AH_)
-        r_DA += list(r_DA_)
+    #     if len(hbonds)==0:
+    #         continue
+    #     num_hbonds += [len(hbonds)]
         
-        posH = positions[f,hbonds_all[:,1]]
-        posD = utils.unwrap_points(positions[f,hbonds_all[:,0]], posH, Lx, Ly, Lz)
-        posA = utils.unwrap_points(positions[f,hbonds_all[:,2]], posH, Lx, Ly, Lz)
-        r_AH_all_ = np.linalg.norm(posA-posH, axis=-1)
-        r_DA_all_ = np.linalg.norm(posD-posA, axis=-1)
-        r_DH_all_ = np.linalg.norm(posD-posH, axis=-1)
-        r_DH_all += list(r_DH_all_)
-        r_AH_all += list(r_AH_all_)
-        r_DA_all += list(r_DA_all_)
+    #     # posH = positions[f,hbonds[:,1]]
+    #     # posD = utils.unwrap_points(positions[f,hbonds[:,0]], posH, Lx, Ly, Lz)
+    #     # posA = utils.unwrap_points(positions[f,hbonds[:,2]], posH, Lx, Ly, Lz)
+    #     # r_AH_ = np.linalg.norm(posA-posH, axis=-1)
+    #     # r_DA_ = np.linalg.norm(posD-posA, axis=-1)
+    #     # r_DH_ = np.linalg.norm(posD-posH, axis=-1)
+    #     # r_DH += list(r_DH_)
+    #     # r_AH += list(r_AH_)
+    #     # r_DA += list(r_DA_)
         
-        v1 = posA-posH
-        v2 = posD-posH
-        theta_ = [ abs(quaternion.angle_v1tov2(v1[i],v2[i])) for i in range(v1.shape[0]) ]
-        theta += [ theta_ ]
+    #     # posH = positions[f,hbonds_all[:,1]]
+    #     # posD = utils.unwrap_points(positions[f,hbonds_all[:,0]], posH, Lx, Ly, Lz)
+    #     # posA = utils.unwrap_points(positions[f,hbonds_all[:,2]], posH, Lx, Ly, Lz)
+    #     # r_AH_all_ = np.linalg.norm(posA-posH, axis=-1)
+    #     # r_DA_all_ = np.linalg.norm(posD-posA, axis=-1)
+    #     # r_DH_all_ = np.linalg.norm(posD-posH, axis=-1)
+    #     # r_DH_all += list(r_DH_all_)
+    #     # r_AH_all += list(r_AH_all_)
+    #     # r_DA_all += list(r_DA_all_)
+        
+    #     # v1 = posA-posH
+    #     # v2 = posD-posH
+    #     # theta_ = [ abs(quaternion.angle_v1tov2(v1[i],v2[i])) for i in range(v1.shape[0]) ]
+    #     # theta += [ theta_ ]
 
-    num_hbonds_perframe = num_hbonds/len(frame_iterator)
+    # num_hbonds_perframe = np.mean(num_hbonds)
+    # num_hbonds_perframe_std = np.std(num_hbonds)
     
+    # print(num_hbonds_perframe, num_hbonds_perframe_std)
     
-    return (np.mean(r_DH),
-            np.std(r_DH),
-            np.mean(r_AH),
-            np.std(r_AH), 
-            np.mean(r_DA),
-            np.std(r_DA),
-            num_hbonds_perframe,
-            np.mean(r_DH_all),
-            np.std(r_DH_all),
-            np.mean(r_AH_all),
-            np.std(r_AH_all), 
-            np.mean(r_DA_all),
-            np.std(r_DA_all),
-            num_hbonds_all)
 
 
 
@@ -271,7 +271,7 @@ def CO_degree_of_alignment(grofile, trajfile, frame_iterator):
     return asphericity
 
 
-def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
+def CO_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
     """
     NOTE: For atomistic simulations
     
@@ -281,25 +281,29 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
     
     import freud
 
-    traj = mdtraj.load(trajfile, top=grofile)
-    
-    positions = traj.xyz
 
-    num_frames = traj.n_frames
+    #------------------------------------ Config -------------------------------
+    traj0 = mdtraj.load(grofile)
+    frame0 = traj0.xyz
+    traj = mdtraj.load(trajfile, top=grofile)
+    positions = np.append(frame0, traj.xyz, axis=0)
+    num_frames = len(positions)
+    unitcell_lengths = [traj0.unitcell_lengths[0]] + [traj.unitcell_lengths[f] for f in range(len(traj))]
+    #------------------------------------------------------------------------
 
 
     #------------------------------------ Box Images ------------------------
     # Identify images if particles jump more than half the box length
-    unitcell_lengths = [traj.unitcell_lengths[f] for f in range(num_frames)]
     images = utils.find_box_images(positions, unitcell_lengths)
 
     #------------------------------------------------------------------------
 
-    residue_indices = []
-    for atom in traj.top.atoms:
-        if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
-            residue_indices += [atom.index]
-
+    if type(residuenames) != type(None):
+        residue_indices = []
+        for atom in traj.top.atoms:
+            if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
+                residue_indices += [atom.index]
+        
 
     # identify the args for C=O bonds using mdtraj
     CO_indices = np.empty((0,2), dtype=int)
@@ -317,7 +321,7 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
 
     CO_indices = CO_indices.astype(int)
 
-    if type(residuename) != type(None):
+    if type(residuenames) != type(None):
         CO_hash = {}
         for id_ in CO_indices:
             CO_hash[id_[0]] = id_
@@ -343,15 +347,85 @@ def CO_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
         nematic.compute(orientations)
         S += [nematic.order]
         
-    return np.mean(S)
+    return np.mean(S), np.std(S)
 
 
 
-def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
+def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuenames=None):
     """
     NOTE: For atomistic simulations
     Calculates baker-hubbard hydrogen bond for frame_iterator
     
+    Calculates the nematic order using freud
+    """
+    
+    import freud 
+
+    #------------------------------------ Config -------------------------------
+    traj0 = mdtraj.load(grofile)
+    frame0 = traj0.xyz
+    traj = mdtraj.load(trajfile, top=grofile)
+    positions = np.append(frame0, traj.xyz, axis=0)
+    num_frames = len(positions)
+    unitcell_lengths = [traj0.unitcell_lengths[0]] + [traj.unitcell_lengths[f] for f in range(len(traj))]
+    #------------------------------------------------------------------------
+
+
+    #------------------------------------ Box Images ------------------------
+    # Identify images if particles jump more than half the box length
+    images = utils.find_box_images(positions, unitcell_lengths)
+
+    #------------------------------------------------------------------------
+
+    if type(residuenames) != type(None):
+        residue_indices = []
+        for atom in traj.top.atoms:
+            if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name in residuenames:
+                residue_indices += [atom.index]
+
+
+    # Calculation
+    S = []
+    for i,f in enumerate(frame_iterator):
+        Lx, Ly, Lz = traj.unitcell_lengths[f]
+        box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+
+        positions_f = box.unwrap(positions[f], images[f])
+
+        hbonds = mdtraj.baker_hubbard(traj[f])
+        # FILTER Hbonds that are only between NH and C=O
+        hbonds_=[]
+        for b in hbonds:
+            if traj.top.atom(b[0]).name == 'N' and traj.top.atom(b[2]).name == 'O':
+                hbonds_ += [b]
+        hbonds = np.array(hbonds_)
+        if type(residuenames) != type(None):
+            hbonds_hash = {}
+            for hb in hbonds:
+                hbonds_hash[hb[0]] = hb
+            args = list(set(residue_indices) & set(hbonds[:,0]))
+            hbonds = np.array([hbonds_hash[arg] for arg in args])
+        
+        if len(hbonds) == 0:
+            continue
+        rOH = positions_f[hbonds[:,1]] - positions_f[hbonds[:,2]]
+        rOH /= np.linalg.norm(rOH, axis=1, keepdims=True)
+
+        # Calculate nematic order
+        director = np.array([1,0,0])
+        orientations = [quaternion.q_between_vectors(director, v2) for v2 in rOH]
+        nematic = freud.order.Nematic(director)
+        nematic.compute(orientations)
+        S += [nematic.order]
+        
+    return np.mean(S), np.std(S)
+
+
+def local_Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
+    """
+    NOTE: For atomistic simulations
+    Calculates baker-hubbard hydrogen bond for frame_iterator
+        
     Calculates the nematic order using freud
     """
     
@@ -371,10 +445,44 @@ def Hbond_nematic_order(grofile, trajfile, frame_iterator, residuename=None):
 
     #------------------------------------------------------------------------
 
+    #------------------------------ filter for residuenames ----------------------
     residue_indices = []
     for atom in traj.top.atoms:
         if str(atom.residue).replace(atom.residue.name, '')+atom.residue.name == residuename:
             residue_indices += [atom.index]
+
+    
+
+    #--------------- select points clusters from the 1st frame ---------------
+    
+    radius = 0.4
+    frame = 0
+    Lx, Ly, Lz = traj.unitcell_lengths[frame_iterator[frame]]
+    box = freud.box.Box(Lx=Lx, Ly=Ly, Lz=Lz, is2D=False)
+    neighborhood = freud.locality.LinkCell(
+        box, points[frame], cell_width=radius)
+    query_args = dict(
+        mode='nearest', num_neighbors=12, r_max=radius, exclude_ii=False)
+    query_points = points[frame]
+    
+    if type(fraction_of_points) != type(None):
+        args = np.random.choice(
+            len(query_points), 
+            size=int(fraction_of_points * len(query_points)))
+        query_points = query_points[args]
+    
+    neighbors = []
+    for query_point in query_points:
+        neighbor_pairs = np.array(neighborhood.query(
+            np.array([query_point]), query_args).toNeighborList()[:])
+        neighbors += [neighbor_pairs[:,1]]
+    
+    cluster_points = []
+    for args in neighbors:
+        cluster_points += [np.copy(points[:,args])]
+
+    #------------------------------------------------------------------------
+
 
 
     # Calculation

@@ -5,6 +5,7 @@ import numpy as np
 import mdtraj
 from . import quaternion
 from . import utils
+import matplotlib.pyplot as plt
 
 import freud
 
